@@ -9,6 +9,8 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    // O banco de teste é compartilhado: arquivos rodam em sequência
+    fileParallelism: false,
     projects: [
       {
         extends: true,
@@ -24,8 +26,6 @@ export default defineConfig({
           name: "integration",
           include: ["src/**/*.int.test.ts"],
           setupFiles: ["tests/setup-db.ts"],
-          // O banco é compartilhado: arquivos rodam em sequência
-          fileParallelism: false,
           testTimeout: 20000,
           hookTimeout: 30000,
         },
