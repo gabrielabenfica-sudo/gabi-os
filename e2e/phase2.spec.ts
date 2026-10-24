@@ -14,7 +14,7 @@ test.beforeEach(async ({ page }) => {
 
 test("tarefas: criar, arrastar no Kanban, detalhar e concluir", async ({ page }) => {
   await page.goto("/tarefas");
-  await page.getByRole("button", { name: "Nova tarefa" }).click();
+  await page.getByRole("button", { name: "Nova tarefa", exact: true }).click();
   const newDialog = page.getByRole("dialog");
   await newDialog.getByLabel("Título", { exact: true }).fill("Roteiro Reels de lançamento");
   await newDialog.getByLabel("Prioridade", { exact: true }).selectOption("HIGH");
