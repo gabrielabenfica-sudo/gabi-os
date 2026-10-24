@@ -3,7 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ChevronsLeft, ChevronsRight, LogOut, Monitor, Moon, Search, Settings, Sun } from "lucide-react";
+import { Bell, ChevronsLeft, ChevronsRight, LogOut, Monitor, Moon, Search, Settings, Sun } from "lucide-react";
+import { QuickCreateMenu } from "./quick-create";
 import { cn, firstName } from "@/lib/utils";
 import { NAV_SECTIONS, ALL_NAV_ITEMS, isActive } from "./nav";
 import { CommandPalette } from "./command-palette";
@@ -46,11 +47,13 @@ export function AppShell({
   user,
   workspaces,
   filter,
+  unread,
   children,
 }: {
   user: ShellUser;
   workspaces: ShellWorkspace[];
   filter: string;
+  unread: number;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -204,6 +207,19 @@ export function AppShell({
 
           <div className="ml-auto flex items-center gap-2">
             <WorkspaceFilter workspaces={workspaces} value={filter} />
+            <QuickCreateMenu compact />
+            <Link
+              href="/notificacoes"
+              className="relative grid size-9 place-items-center rounded-md hover:bg-accent"
+              aria-label={unread ? `Notificações: ${unread} não lida(s)` : "Notificações"}
+            >
+              <Bell className="size-[18px]" />
+              {unread > 0 && (
+                <span className="absolute right-1 top-1 grid min-w-4 place-items-center rounded-full bg-danger px-1 text-[10px] font-semibold leading-4 text-white">
+                  {unread > 99 ? "99+" : unread}
+                </span>
+              )}
+            </Link>
 
             <DropdownMenu>
               <DropdownMenuTrigger

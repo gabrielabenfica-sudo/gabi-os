@@ -25,9 +25,7 @@ test("cadastro da administradora, persistência e configurações", async ({ pag
 
   await expect(page).toHaveURL("/");
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Gabriela");
-  await expect(page.getByText("Trabalho TURBO")).toBeVisible();
-  await expect(page.getByText("Pessoal Gabriela")).toBeVisible();
-  await expect(page.getByText("Trabalho Mentoria")).toBeVisible();
+  await expect(page.getByText("Todos os ambientes ·")).toBeVisible();
 
   // Atualizar a página não perde a sessão nem os dados
   await page.reload();
@@ -35,9 +33,14 @@ test("cadastro da administradora, persistência e configurações", async ({ pag
 
   // Paleta de comandos navega até Configurações
   await page.keyboard.press("Control+k");
-  await page.getByPlaceholder("Digite para buscar páginas…").fill("config");
+  await page.getByPlaceholder("Buscar tarefas, compromissos, anotações ou páginas…").fill("config");
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL("/configuracoes");
+  const names = page.getByLabel("Nome do ambiente");
+  await expect(names).toHaveCount(3);
+  await expect(names.nth(0)).toHaveValue("Trabalho TURBO");
+  await expect(names.nth(1)).toHaveValue("Pessoal Gabriela");
+  await expect(names.nth(2)).toHaveValue("Trabalho Mentoria");
 
   // Renomeia um ambiente e confere a persistência
   const first = page.getByLabel("Nome do ambiente").first();
@@ -56,7 +59,7 @@ test("cadastro da administradora, persistência e configurações", async ({ pag
   await reloaded;
   await expect(page.getByRole("button", { name: "Filtrar por ambiente" })).toContainText("Pessoal Gabriela");
   await page.goto("/");
-  await expect(page.getByText("Ambiente selecionado")).toBeVisible();
+  await expect(page.getByText("Pessoal Gabriela ·")).toBeVisible();
 
   // Exportação retorna JSON sem segredos
   const res = await page.request.get("/api/export");

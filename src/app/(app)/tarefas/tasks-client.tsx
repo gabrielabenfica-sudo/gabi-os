@@ -55,6 +55,10 @@ export function TasksClient({
     openTaskId ? { mode: "edit", taskId: openTaskId } : openNew ? { mode: "new" } : null,
   );
   const [columnsOpen, setColumnsOpen] = React.useState(false);
+  React.useEffect(() => {
+    if (openNew) setDialog({ mode: "new" });
+    else if (openTaskId) setDialog((d) => (d?.mode === "edit" && d.taskId === openTaskId ? d : { mode: "edit", taskId: openTaskId }));
+  }, [openNew, openTaskId]);
   const [search, setSearch] = React.useState(params.get("q") ?? "");
 
   const setParams = React.useCallback(

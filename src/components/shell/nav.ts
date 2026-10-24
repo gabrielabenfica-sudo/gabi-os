@@ -1,6 +1,10 @@
 import {
+  Bell,
+  CalendarDays,
   LayoutDashboard,
   ListChecks,
+  NotebookPen,
+  Repeat,
   Settings,
   type LucideIcon,
 } from "lucide-react";
@@ -27,12 +31,16 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     title: "Organização",
     items: [
+      { href: "/agenda", label: "Agenda", icon: CalendarDays, keywords: ["calendário", "compromissos", "eventos", "reunião"], shortcut: "G A" },
       { href: "/tarefas", label: "Tarefas", icon: ListChecks, keywords: ["kanban", "trello", "demandas", "quadro"], shortcut: "G T" },
+      { href: "/anotacoes", label: "Anotações", icon: NotebookPen, keywords: ["notas", "cadernos", "texto"], shortcut: "G N" },
+      { href: "/habitos", label: "Hábitos", icon: Repeat, keywords: ["rotina", "academia", "leitura", "devocional", "estudos"], shortcut: "G H" },
     ],
   },
   {
     title: "Sistema",
     items: [
+      { href: "/notificacoes", label: "Notificações", icon: Bell, keywords: ["resumo", "revisão", "lembretes", "alertas"] },
       { href: "/configuracoes", label: "Configurações", icon: Settings, keywords: ["perfil", "senha", "ambientes", "exportar", "tema"], shortcut: "G C" },
     ],
   },
