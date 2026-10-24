@@ -33,7 +33,9 @@ test("tarefas: criar, arrastar no Kanban, detalhar e concluir", async ({ page })
   await page.mouse.down();
   await page.mouse.move(from!.x + from!.width / 2 + 20, from!.y + 20, { steps: 5 });
   await page.mouse.move(to!.x + to!.width / 2, to!.y + 80, { steps: 15 });
+  const saved = page.waitForResponse((r) => r.request().method() === "POST" && new URL(r.url()).pathname === "/tarefas");
   await page.mouse.up();
+  await (await saved).finished();
   await expect(doing.locator('[data-task-title="Roteiro Reels de lançamento"]')).toBeVisible();
 
   // Persistiu no servidor

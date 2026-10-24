@@ -30,7 +30,7 @@ export const test = base.extend<{ diag: string[] }>({
       });
       await use(lines);
       if (testInfo.status !== testInfo.expectedStatus && process.env.CI) {
-        const body = lines.slice(-60).join("\n").replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
+        const body = lines.filter((l) => !l.includes("requestfailed GET")).slice(-80).join("\n").replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
         console.log(`::warning title=Diagnóstico E2E (${testInfo.title})::${body || "sem eventos"}`);
       }
     },
