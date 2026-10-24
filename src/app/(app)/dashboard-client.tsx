@@ -298,7 +298,7 @@ function HabitsCard({ data }: { data: DashboardData }) {
         ) : (
           <ul className="flex flex-wrap gap-2">
             {data.habits.items.filter((h) => h.expectedToday).map((h) => {
-              const on = state[h.id];
+              const on = state[h.id] ?? false;
               return (
                 <li key={h.id}>
                   <button
