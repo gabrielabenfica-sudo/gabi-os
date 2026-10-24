@@ -109,3 +109,43 @@ export function zonedToUtc(ymd: string, hhmm: string, tz: string = DEFAULT_TZ): 
 export function formatYmdBR(ymd: string): string {
   return `${ymd.slice(8, 10)}/${ymd.slice(5, 7)}/${ymd.slice(0, 4)}`;
 }
+
+// ── Meses ──────────────────────────────────────────────────────
+
+/** Soma meses a uma data "YYYY-MM-DD", ajustando o dia ao fim do mês (31/01 + 1 → 28/02). */
+export function addMonthsYmd(ymd: string, months: number): string {
+  const [y, m, d] = ymd.split("-").map(Number) as [number, number, number];
+  const total = y * 12 + (m - 1) + months;
+  const ny = Math.floor(total / 12);
+  const nm = (total % 12) + 1;
+  const last = new Date(Date.UTC(ny, nm, 0)).getUTCDate();
+  return `${ny}-${String(nm).padStart(2, "0")}-${String(Math.min(d, last)).padStart(2, "0")}`;
+}
+
+/** "YYYY-MM" de uma data "YYYY-MM-DD". */
+export function ymOf(ymd: string): string {
+  return ymd.slice(0, 7);
+}
+
+export function addMonthsYm(ym: string, months: number): string {
+  return addMonthsYmd(`${ym}-01`, months).slice(0, 7);
+}
+
+/** Dia "d" do mês "YYYY-MM", limitado ao último dia. */
+export function dayOfMonthYmd(ym: string, day: number): string {
+  const [y, m] = ym.split("-").map(Number) as [number, number];
+  const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  return `${ym}-${String(Math.min(Math.max(1, day), last)).padStart(2, "0")}`;
+}
+
+const MONTH_NAMES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+
+/** "2026-10" → "outubro de 2026" (ou "out/2026" no formato curto). */
+export function formatYm(ym: string, short = false): string {
+  const name = MONTH_NAMES[Number(ym.slice(5, 7)) - 1] ?? "";
+  return short ? `${name.slice(0, 3)}/${ym.slice(0, 4)}` : `${name} de ${ym.slice(0, 4)}`;
+}
+
+export function isValidYm(ym: string): boolean {
+  return /^\d{4}-(0[1-9]|1[0-2])$/.test(ym);
+}
