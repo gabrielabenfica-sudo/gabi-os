@@ -724,6 +724,9 @@ model FinancialTransaction {
   // FIXED | VARIABLE | RECURRING | ONE_OFF
   nature         String            @default("ONE_OFF")
   recurrenceGroupId String?
+  // Posição na série (parcelas ou recorrência mensal): 3 de 10
+  seriesIndex    Int?
+  seriesTotal    Int?
   rrule          String?
   notes          String?
   // Vínculos que impedem duplicidade
@@ -744,6 +747,7 @@ model FinancialTransaction {
   @@unique([accountId, externalId])
   @@index([workspaceId, competenceDate])
   @@index([workspaceId, status, dueDate])
+  @@index([recurrenceGroupId])
 }
 
 enum TransferKind {
@@ -1117,6 +1121,7 @@ model Sale {
   mentee            Mentee?            @relation(fields: [menteeId], references: [id], onDelete: SetNull)
   programId         String?
   program           MentorshipProgram? @relation(fields: [programId], references: [id], onDelete: SetNull)
+  customerName      String?
   description       String
   totalCents        Int
   // Data da venda = competência do faturamento
