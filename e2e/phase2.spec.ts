@@ -45,7 +45,7 @@ test("tarefas: criar, arrastar no Kanban, detalhar e concluir", async ({ page })
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByRole("heading", { name: "Editar tarefa" })).toBeVisible();
   await dialog.getByLabel("Novo item da checklist").fill("Escrever gancho");
-  await dialog.getByRole("button", { name: "Adicionar" }).first().click();
+  await dialog.getByLabel("Novo item da checklist").press("Enter");
   await expect(dialog.getByText("Escrever gancho")).toBeVisible();
   await expect(dialog.getByText(/Iniciada em/)).toBeVisible();
   await dialog.getByRole("button", { name: "Concluir", exact: true }).click();
