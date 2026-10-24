@@ -47,13 +47,14 @@ test("cadastro da administradora, persistência e configurações", async ({ pag
   await page.reload();
   await expect(page.getByLabel("Nome do ambiente").first()).toHaveValue("TURBO Digital");
 
-  // Filtro de ambiente no topo
+  // Filtro de ambiente no topo: salva e recarrega a página
   await page.getByRole("button", { name: "Filtrar por ambiente" }).click();
+  const saved = page.waitForResponse((r) => r.url().endsWith("/api/preferences/workspace-filter"));
+  const reloaded = page.waitForEvent("load");
   await page.getByRole("menuitem", { name: /Pessoal Gabriela/ }).click();
-  const filter = page.getByRole("button", { name: "Filtrar por ambiente" });
-  await expect(filter).toContainText("Pessoal Gabriela");
-  // Aguarda o servidor concluir o salvamento antes de navegar
-  await expect(filter).toHaveAttribute("aria-busy", "false", { timeout: 20_000 });
+  expect((await saved).status()).toBe(200);
+  await reloaded;
+  await expect(page.getByRole("button", { name: "Filtrar por ambiente" })).toContainText("Pessoal Gabriela");
   await page.goto("/");
   await expect(page.getByText("Ambiente selecionado")).toBeVisible();
 

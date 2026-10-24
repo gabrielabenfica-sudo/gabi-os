@@ -11,25 +11,34 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { setWorkspaceFilterAction } from "@/app/(app)/shell-actions";
 
 export type ShellWorkspace = { id: string; name: string; color: string; kind: string };
 
 export function WorkspaceFilter({ workspaces, value }: { workspaces: ShellWorkspace[]; value: string }) {
-  const [pending, startTransition] = React.useTransition();
-  // Mostra a escolha imediatamente enquanto o servidor salva e recarrega os dados
-  const [optimistic, setOptimistic] = React.useOptimistic(value);
-  const current = workspaces.find((w) => w.id === optimistic);
+  const [selected, setSelected] = React.useState(value);
+  const [pending, setPending] = React.useState(false);
+  const current = workspaces.find((w) => w.id === selected);
 
-  const select = (id: string) =>
-    startTransition(async () => {
-      setOptimistic(id);
-      try {
-        await setWorkspaceFilterAction(id);
-      } catch {
-        toast.error("Não foi possível trocar o ambiente.");
-      }
-    });
+  // Trocar de ambiente muda o contexto de todas as telas: salva e recarrega a página inteira.
+  const select = async (id: string) => {
+    if (id === selected) return;
+    const previous = selected;
+    setSelected(id);
+    setPending(true);
+    try {
+      const res = await fetch("/api/preferences/workspace-filter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value: id }),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      window.location.reload();
+    } catch {
+      setSelected(previous);
+      setPending(false);
+      toast.error("Não foi possível trocar o ambiente.");
+    }
+  };
 
   return (
     <DropdownMenu>
@@ -48,15 +57,15 @@ export function WorkspaceFilter({ workspaces, value }: { workspaces: ShellWorksp
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>Ambiente</DropdownMenuLabel>
-        <DropdownMenuItem onSelect={() => select("all")}>
-          <Layers /> <span className="flex-1">Todos</span> {optimistic === "all" && <Check />}
+        <DropdownMenuItem onSelect={() => void select("all")}>
+          <Layers /> <span className="flex-1">Todos</span> {selected === "all" && <Check />}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         {workspaces.map((w) => (
-          <DropdownMenuItem key={w.id} onSelect={() => select(w.id)}>
+          <DropdownMenuItem key={w.id} onSelect={() => void select(w.id)}>
             <span className="size-2.5 rounded-full" style={{ background: w.color }} aria-hidden />
             <span className="flex-1">{w.name}</span>
-            {optimistic === w.id && <Check />}
+            {selected === w.id && <Check />}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
