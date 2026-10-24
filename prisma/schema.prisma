@@ -1,0 +1,1420 @@
+// Gabi OS — modelo de dados
+//
+// Convenções:
+// - Valores monetários em centavos (Int). Nunca float.
+// - Toda informação de negócio pertence a um Workspace (ambiente).
+// - Exclusão lógica via deletedAt onde faz sentido.
+// - Datas sem hora (competência, hábitos, vencimentos) usam @db.Date.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Identidade, sessões e permissões
+// ═══════════════════════════════════════════════════════════════
+
+enum Theme {
+  LIGHT
+  DARK
+  SYSTEM
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  isAdmin      Boolean   @default(false)
+  timezone     String    @default("America/Sao_Paulo")
+  theme        Theme     @default(LIGHT)
+  appName      String    @default("Gabi OS")
+  // Layout e widgets do dashboard (ordem, ocultos)
+  dashboardPrefs Json?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  sessions          Session[]
+  memberships       WorkspaceMember[]
+  ownedWorkspaces   Workspace[]          @relation("WorkspaceOwner")
+  auditLogs         AuditLog[]
+  notifications     Notification[]
+  notificationPrefs NotificationPreference?
+  calendarConnections CalendarConnection[]
+  socialConnections SocialConnection[]
+  syncLogs          IntegrationSyncLog[]
+  maasAreas         MaasArea[]
+  maasAssessments   MaasAssessment[]
+  importBatches     ImportBatch[]
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  // Hash SHA-256 do token; o token em si só existe no cookie
+  tokenHash  String   @unique
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  lastSeenAt DateTime @default(now())
+  userAgent  String?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+}
+
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  email     String
+  ip        String?
+  success   Boolean
+  createdAt DateTime @default(now())
+
+  @@index([email, createdAt])
+  @@index([ip, createdAt])
+}
+
+enum WorkspaceKind {
+  TURBO
+  PESSOAL
+  MENTORIA
+}
+
+model Workspace {
+  id        String        @id @default(cuid())
+  name      String
+  kind      WorkspaceKind
+  color     String        @default("#A66F7C")
+  position  Int           @default(0)
+  ownerId   String
+  owner     User          @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  members        WorkspaceMember[]
+  projects       Project[]
+  taskStatuses   TaskStatus[]
+  tasks          Task[]
+  labels         Label[]
+  events         CalendarEvent[]
+  externalCalendars ExternalCalendar[]
+  noteFolders    NoteFolder[]
+  notes          Note[]
+  goals          Goal[]
+  habits         Habit[]
+  accounts       FinancialAccount[]
+  categories     FinancialCategory[]
+  transactions   FinancialTransaction[]
+  transfersOut   Transfer[]           @relation("TransferFromWorkspace")
+  transfersIn    Transfer[]           @relation("TransferToWorkspace")
+  creditCards    CreditCard[]
+  compensation   CompensationRecord[]
+  bonusRules     BonusRule[]
+  pipelineStages PipelineStage[]
+  leads          Lead[]
+  programs       MentorshipProgram[]
+  mentees        Mentee[]
+  sales          Sale[]
+  contentStatuses ContentStatus[]
+  contentItems   ContentItem[]
+  contentRefs    ContentReference[]
+  socialProfiles SocialProfile[]
+  auditLogs      AuditLog[]
+  notifications  Notification[]
+  attachments    Attachment[]
+  importBatches  ImportBatch[]
+
+  @@index([ownerId])
+}
+
+enum MemberRole {
+  OWNER
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+model WorkspaceMember {
+  id          String     @id @default(cuid())
+  workspaceId String
+  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role        MemberRole @default(VIEWER)
+  // Módulos permitidos para papéis não-OWNER (ex.: ["tasks","content"]).
+  // Financeiro e mentorados exigem permissão explícita.
+  modules     String[]   @default([])
+  createdAt   DateTime   @default(now())
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+}
+
+model AuditLog {
+  id          String     @id @default(cuid())
+  userId      String?
+  user        User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  workspaceId String?
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  entity      String
+  entityId    String
+  action      String
+  before      Json?
+  after       Json?
+  createdAt   DateTime   @default(now())
+
+  @@index([entity, entityId])
+  @@index([userId, createdAt])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Projetos e tarefas
+// ═══════════════════════════════════════════════════════════════
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Project {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  color       String?
+  archived    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tasks  Task[]
+  events CalendarEvent[]
+
+  @@index([workspaceId])
+}
+
+// Colunas do Kanban, personalizáveis por ambiente
+model TaskStatus {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  position    Int
+  // Semântica: BACKLOG, TODO, IN_PROGRESS, WAITING, REVIEW, DONE
+  category    String    @default("TODO")
+  isDone      Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+
+  tasks Task[]
+
+  @@index([workspaceId, position])
+}
+
+model Task {
+  id             String     @id @default(cuid())
+  workspaceId    String
+  workspace      Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  projectId      String?
+  project        Project?   @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  statusId       String
+  status         TaskStatus @relation(fields: [statusId], references: [id], onDelete: Restrict)
+  parentId       String?
+  parent         Task?      @relation("Subtasks", fields: [parentId], references: [id], onDelete: Cascade)
+  subtasks       Task[]     @relation("Subtasks")
+  title          String
+  description    String?
+  assignee       String?
+  priority       Priority   @default(MEDIUM)
+  // Ordem dentro da coluna (fracionário para reordenação barata)
+  position       Float      @default(0)
+  startDate      DateTime?
+  dueDate        DateTime?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  rrule          String?
+  recurrenceParentId String?
+  estimateMinutes Int?
+  isTemplate     Boolean    @default(false)
+  archivedAt     DateTime?
+  deletedAt      DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  checklist   TaskChecklistItem[]
+  comments    TaskComment[]
+  labels      TaskLabel[]
+  timeEntries TimeEntry[]
+  history     TaskHistory[]
+  events      CalendarEvent[]
+
+  @@index([workspaceId, statusId, position])
+  @@index([workspaceId, dueDate])
+}
+
+model TaskChecklistItem {
+  id        String  @id @default(cuid())
+  taskId    String
+  task      Task    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  text      String
+  done      Boolean @default(false)
+  position  Int     @default(0)
+
+  @@index([taskId])
+}
+
+model TaskComment {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  authorId  String?
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([taskId])
+}
+
+model TaskHistory {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  field     String
+  fromValue String?
+  toValue   String?
+  createdAt DateTime @default(now())
+
+  @@index([taskId, createdAt])
+}
+
+model Label {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  color       String    @default("#B8AAA4")
+
+  tasks TaskLabel[]
+
+  @@unique([workspaceId, name])
+}
+
+model TaskLabel {
+  taskId  String
+  task    Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  labelId String
+  label   Label  @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, labelId])
+}
+
+model TimeEntry {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  minutes   Int
+  date      DateTime @db.Date
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@index([taskId])
+}
+
+// Anexos genéricos (arquivo ou link) para qualquer entidade
+model Attachment {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  entityType  String
+  entityId    String
+  name        String
+  url         String?
+  mimeType    String?
+  sizeBytes   Int?
+  // Pequenos arquivos podem ficar no banco quando não há storage externo
+  data        Bytes?
+  createdAt   DateTime  @default(now())
+
+  @@index([entityType, entityId])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Agenda e Google Calendar
+// ═══════════════════════════════════════════════════════════════
+
+enum EventStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum Transparency {
+  BUSY
+  FREE
+}
+
+enum ConnectionStatus {
+  ACTIVE
+  ERROR
+  REVOKED
+  PENDING
+}
+
+model CalendarConnection {
+  id              String           @id @default(cuid())
+  userId          String
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider        String           @default("google")
+  accountEmail    String?
+  // Tokens criptografados (AES-256-GCM)
+  accessTokenEnc  String?
+  refreshTokenEnc String?
+  expiresAt       DateTime?
+  scope           String?
+  status          ConnectionStatus @default(PENDING)
+  lastSyncAt      DateTime?
+  lastError       String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  calendars ExternalCalendar[]
+
+  @@unique([userId, provider, accountEmail])
+}
+
+model ExternalCalendar {
+  id           String             @id @default(cuid())
+  connectionId String
+  connection   CalendarConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  externalId   String
+  name         String
+  color        String?
+  // Ambiente para onde os eventos deste calendário vão por padrão
+  workspaceId  String?
+  workspace    Workspace?         @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  selected     Boolean            @default(true)
+  isPrimary    Boolean            @default(false)
+  syncToken    String?
+  lastSyncAt   DateTime?
+
+  events CalendarEvent[]
+
+  @@unique([connectionId, externalId])
+}
+
+model CalendarEvent {
+  id                 String            @id @default(cuid())
+  workspaceId        String
+  workspace          Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  title              String
+  description        String?
+  start              DateTime
+  end                DateTime
+  allDay             Boolean           @default(false)
+  timezone           String            @default("America/Sao_Paulo")
+  location           String?
+  attendees          Json?
+  priority           Priority          @default(MEDIUM)
+  rrule              String?
+  reminderMinutes    Int?
+  notes              String?
+  status             EventStatus       @default(NOT_STARTED)
+  transparency       Transparency      @default(BUSY)
+  taskId             String?
+  task               Task?             @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  projectId          String?
+  project            Project?          @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  // Sincronização
+  externalCalendarId String?
+  externalCalendar   ExternalCalendar? @relation(fields: [externalCalendarId], references: [id], onDelete: SetNull)
+  externalId         String?
+  externalEtag       String?
+  externalUpdatedAt  DateTime?
+  recurringExternalId String?
+  originalStart      DateTime?
+  // PENDING_PUSH: alteração local ainda não enviada; CONFLICT: alterado nos dois lados
+  syncState          String            @default("LOCAL")
+  conflictData       Json?
+  deletedAt          DateTime?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  @@unique([externalCalendarId, externalId])
+  @@index([workspaceId, start])
+  @@index([start, end])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Anotações
+// ═══════════════════════════════════════════════════════════════
+
+model NoteFolder {
+  id          String       @id @default(cuid())
+  workspaceId String
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  parentId    String?
+  parent      NoteFolder?  @relation("FolderTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children    NoteFolder[] @relation("FolderTree")
+  name        String
+  position    Int          @default(0)
+  createdAt   DateTime     @default(now())
+
+  notes Note[]
+
+  @@index([workspaceId])
+}
+
+model Note {
+  id          String      @id @default(cuid())
+  workspaceId String
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  folderId    String?
+  folder      NoteFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  title       String
+  // Conteúdo do editor (JSON) e texto plano para busca
+  content     Json?
+  plainText   String      @default("")
+  favorite    Boolean     @default(false)
+  deletedAt   DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  links NoteLink[]
+
+  @@index([workspaceId, updatedAt])
+}
+
+model NoteLink {
+  id         String @id @default(cuid())
+  noteId     String
+  note       Note   @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  // task | event | project | mentee | lead | content
+  entityType String
+  entityId   String
+
+  @@unique([noteId, entityType, entityId])
+  @@index([entityType, entityId])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Metas, objetivos e hábitos
+// ═══════════════════════════════════════════════════════════════
+
+enum GoalType {
+  FINANCIAL
+  PROFESSIONAL
+  PERSONAL
+  COMMERCIAL
+  CONTENT
+  HABIT
+  DEVELOPMENT
+}
+
+enum GoalStatus {
+  ACTIVE
+  ACHIEVED
+  MISSED
+  PAUSED
+  CANCELLED
+}
+
+model Goal {
+  id           String     @id @default(cuid())
+  workspaceId  String
+  workspace    Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  type         GoalType
+  title        String
+  description  String?
+  category     String?
+  // QUANTITATIVE ou QUALITATIVE
+  measure      String     @default("QUANTITATIVE")
+  indicator    String?
+  unit         String?
+  startValue   Decimal?   @db.Decimal(18, 2)
+  targetValue  Decimal?   @db.Decimal(18, 2)
+  currentValue Decimal?   @db.Decimal(18, 2)
+  // Se preenchido, o valor atual é calculado a partir de dados reais
+  // (ex.: "mentoria.revenue.month", "content.published.month")
+  autoMetric   String?
+  // Horizonte: MONTHLY, QUARTERLY, YEARLY, CUSTOM
+  horizon      String     @default("CUSTOM")
+  startDate    DateTime?  @db.Date
+  dueDate      DateTime?  @db.Date
+  frequency    String?
+  owner        String?
+  status       GoalStatus @default(ACTIVE)
+  // Objetivo pessoal vs meta
+  isObjective  Boolean    @default(false)
+  notes        String?
+  deletedAt    DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  steps    GoalStep[]
+  progress GoalProgress[]
+  bonusRules BonusRule[]
+
+  @@index([workspaceId, status])
+}
+
+model GoalStep {
+  id       String    @id @default(cuid())
+  goalId   String
+  goal     Goal      @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  title    String
+  done     Boolean   @default(false)
+  dueDate  DateTime? @db.Date
+  position Int       @default(0)
+
+  @@index([goalId])
+}
+
+model GoalProgress {
+  id        String   @id @default(cuid())
+  goalId    String
+  goal      Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  date      DateTime @db.Date
+  value     Decimal  @db.Decimal(18, 2)
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@index([goalId, date])
+}
+
+enum HabitFrequency {
+  DAILY
+  WEEKLY
+  CUSTOM
+}
+
+model Habit {
+  id           String         @id @default(cuid())
+  workspaceId  String
+  workspace    Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name         String
+  category     String?
+  frequency    HabitFrequency @default(DAILY)
+  // CUSTOM: dias da semana (0=domingo … 6=sábado)
+  daysOfWeek   Int[]          @default([])
+  // WEEKLY: vezes por semana
+  timesPerWeek Int?
+  color        String?
+  active       Boolean        @default(true)
+  position     Int            @default(0)
+  createdAt    DateTime       @default(now())
+
+  entries HabitEntry[]
+
+  @@index([workspaceId])
+}
+
+model HabitEntry {
+  id      String   @id @default(cuid())
+  habitId String
+  habit   Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  date    DateTime @db.Date
+  done    Boolean  @default(true)
+  note    String?
+
+  @@unique([habitId, date])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Financeiro
+// ═══════════════════════════════════════════════════════════════
+
+enum AccountType {
+  CHECKING
+  SAVINGS
+  CASH
+  INVESTMENT
+  WALLET
+  OTHER
+}
+
+model FinancialAccount {
+  id                  String      @id @default(cuid())
+  workspaceId         String
+  workspace           Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name                String
+  type                AccountType @default(CHECKING)
+  institution         String?
+  initialBalanceCents Int         @default(0)
+  initialBalanceDate  DateTime?   @db.Date
+  archived            Boolean     @default(false)
+  // Integração Open Finance (agregador), quando houver
+  externalProvider    String?
+  externalId          String?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  transactions FinancialTransaction[]
+  transfersOut Transfer[]            @relation("TransferFromAccount")
+  transfersIn  Transfer[]            @relation("TransferToAccount")
+  paidCards    CreditCard[]
+  receivables  Receivable[]
+  importBatches ImportBatch[]
+
+  @@index([workspaceId])
+}
+
+enum CategoryKind {
+  INCOME
+  EXPENSE
+}
+
+model FinancialCategory {
+  id          String              @id @default(cuid())
+  workspaceId String
+  workspace   Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  kind        CategoryKind
+  // Mentoria: FIXED | VARIABLE | COMMISSION | REFUND | OTHER
+  costType    String?
+  color       String?
+  parentId    String?
+  parent      FinancialCategory?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children    FinancialCategory[] @relation("CategoryTree")
+  archived    Boolean             @default(false)
+
+  transactions  FinancialTransaction[]
+  cardPurchases CardPurchase[]
+
+  @@unique([workspaceId, kind, name])
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum TransactionStatus {
+  PLANNED
+  REALIZED
+  CANCELLED
+}
+
+// Receitas e despesas. Transferências NÃO são transações (ver Transfer),
+// e compras no cartão vivem em CardPurchase/Installment.
+model FinancialTransaction {
+  id             String            @id @default(cuid())
+  workspaceId    String
+  workspace      Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  accountId      String?
+  account        FinancialAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  categoryId     String?
+  category       FinancialCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  type           TransactionType
+  status         TransactionStatus @default(PLANNED)
+  description    String
+  amountCents    Int
+  // Competência (a que mês pertence) e caixa (quando o dinheiro se moveu)
+  competenceDate DateTime          @db.Date
+  dueDate        DateTime?         @db.Date
+  paidAt         DateTime?         @db.Date
+  // FIXED | VARIABLE | RECURRING | ONE_OFF
+  nature         String            @default("ONE_OFF")
+  recurrenceGroupId String?
+  rrule          String?
+  notes          String?
+  // Vínculos que impedem duplicidade
+  compensationRecordId String?     @unique
+  compensationRecord   CompensationRecord? @relation(fields: [compensationRecordId], references: [id], onDelete: SetNull)
+  receivableId   String?           @unique
+  receivable     Receivable?       @relation("ReceivableTransaction", fields: [receivableId], references: [id], onDelete: SetNull)
+  saleId         String?
+  // Importação/conciliação (FITID do OFX ou hash da linha do CSV)
+  externalId     String?
+  importBatchId  String?
+  importBatch    ImportBatch?      @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+  reconciled     Boolean           @default(false)
+  deletedAt      DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@unique([accountId, externalId])
+  @@index([workspaceId, competenceDate])
+  @@index([workspaceId, status, dueDate])
+}
+
+enum TransferKind {
+  INTERNAL
+  // Retirada/distribuição da Mentoria para a pessoa física
+  DISTRIBUTION
+  // Pagamento de fatura de cartão
+  CARD_PAYMENT
+  // Aplicação/resgate de reserva ou investimento
+  INVESTMENT
+}
+
+model Transfer {
+  id              String            @id @default(cuid())
+  kind            TransferKind      @default(INTERNAL)
+  fromWorkspaceId String
+  fromWorkspace   Workspace         @relation("TransferFromWorkspace", fields: [fromWorkspaceId], references: [id], onDelete: Cascade)
+  toWorkspaceId   String
+  toWorkspace     Workspace         @relation("TransferToWorkspace", fields: [toWorkspaceId], references: [id], onDelete: Cascade)
+  fromAccountId   String?
+  fromAccount     FinancialAccount? @relation("TransferFromAccount", fields: [fromAccountId], references: [id], onDelete: SetNull)
+  toAccountId     String?
+  toAccount       FinancialAccount? @relation("TransferToAccount", fields: [toAccountId], references: [id], onDelete: SetNull)
+  cardInvoiceId   String?
+  cardInvoice     CardInvoice?      @relation(fields: [cardInvoiceId], references: [id], onDelete: SetNull)
+  amountCents     Int
+  date            DateTime          @db.Date
+  status          TransactionStatus @default(REALIZED)
+  description     String?
+  deletedAt       DateTime?
+  createdAt       DateTime          @default(now())
+
+  @@index([fromWorkspaceId, date])
+  @@index([toWorkspaceId, date])
+}
+
+model CreditCard {
+  id               String            @id @default(cuid())
+  workspaceId      String
+  workspace        Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name             String
+  institution      String?
+  limitCents       Int               @default(0)
+  closingDay       Int
+  dueDay           Int
+  paymentAccountId String?
+  paymentAccount   FinancialAccount? @relation(fields: [paymentAccountId], references: [id], onDelete: SetNull)
+  archived         Boolean           @default(false)
+  createdAt        DateTime          @default(now())
+
+  purchases CardPurchase[]
+  invoices  CardInvoice[]
+
+  @@index([workspaceId])
+}
+
+model CardPurchase {
+  id                String             @id @default(cuid())
+  cardId            String
+  card              CreditCard         @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  categoryId        String?
+  category          FinancialCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  description       String
+  totalCents        Int
+  installmentsCount Int                @default(1)
+  purchaseDate      DateTime           @db.Date
+  notes             String?
+  externalId        String?
+  deletedAt         DateTime?
+  createdAt         DateTime           @default(now())
+
+  installments Installment[]
+
+  @@index([cardId, purchaseDate])
+}
+
+enum InvoiceStatus {
+  OPEN
+  CLOSED
+  PAID
+  PARTIAL
+}
+
+model CardInvoice {
+  id             String        @id @default(cuid())
+  cardId         String
+  card           CreditCard    @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  // Primeiro dia do mês de vencimento da fatura
+  referenceMonth DateTime      @db.Date
+  closingDate    DateTime      @db.Date
+  dueDate        DateTime      @db.Date
+  status         InvoiceStatus @default(OPEN)
+
+  installments Installment[]
+  payments     Transfer[]
+
+  @@unique([cardId, referenceMonth])
+}
+
+model Installment {
+  id          String       @id @default(cuid())
+  purchaseId  String
+  purchase    CardPurchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  invoiceId   String
+  invoice     CardInvoice  @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  number      Int
+  amountCents Int
+
+  @@unique([purchaseId, number])
+  @@index([invoiceId])
+}
+
+model ImportBatch {
+  id          String            @id @default(cuid())
+  userId      String
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspaceId String
+  workspace   Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  accountId   String?
+  account     FinancialAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  fileName    String
+  format      String
+  totalRows   Int               @default(0)
+  imported    Int               @default(0)
+  duplicates  Int               @default(0)
+  createdAt   DateTime          @default(now())
+
+  transactions FinancialTransaction[]
+}
+
+// ─── Remuneração TURBO ─────────────────────────────────────────
+
+enum CompensationKind {
+  SALARY
+  BONUS
+  OTHER
+}
+
+enum CompensationStatus {
+  EXPECTED
+  RECEIVED
+  CANCELLED
+}
+
+model CompensationRecord {
+  id               String             @id @default(cuid())
+  workspaceId      String
+  workspace        Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  kind             CompensationKind
+  // Primeiro dia do mês de referência
+  referenceMonth   DateTime           @db.Date
+  description      String?
+  expectedCents    Int
+  receivedCents    Int?
+  expectedDate     DateTime?          @db.Date
+  receivedDate     DateTime?          @db.Date
+  status           CompensationStatus @default(EXPECTED)
+  bonusRuleId      String?
+  bonusRule        BonusRule?         @relation(fields: [bonusRuleId], references: [id], onDelete: SetNull)
+  notes            String?
+  deletedAt        DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  // Receita realizada no ambiente pessoal quando o valor é recebido
+  transaction FinancialTransaction?
+
+  @@index([workspaceId, referenceMonth])
+}
+
+model BonusRule {
+  id             String    @id @default(cuid())
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  referenceMonth DateTime  @db.Date
+  title          String
+  criteria       String?
+  goalId         String?
+  goal           Goal?     @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  targetValue    Decimal?  @db.Decimal(18, 2)
+  achievedValue  Decimal?  @db.Decimal(18, 2)
+  // Faixas: [{ "minPercent": 80, "amountCents": 50000 }, …]
+  tiers          Json?
+  expectedCents  Int?
+  createdAt      DateTime  @default(now())
+
+  records CompensationRecord[]
+
+  @@index([workspaceId, referenceMonth])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Mentoria: CRM, mentorados, vendas e recebíveis
+// ═══════════════════════════════════════════════════════════════
+
+model PipelineStage {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  position    Int
+  isWon       Boolean   @default(false)
+  isLost      Boolean   @default(false)
+
+  leads Lead[]
+
+  @@index([workspaceId, position])
+}
+
+model MentorshipProgram {
+  id            String    @id @default(cuid())
+  workspaceId   String
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name          String
+  description   String?
+  priceCents    Int?
+  durationWeeks Int?
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+
+  leads   Lead[]
+  mentees Mentee[]
+  sales   Sale[]
+}
+
+model Lead {
+  id             String             @id @default(cuid())
+  workspaceId    String
+  workspace      Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  stageId        String
+  stage          PipelineStage      @relation(fields: [stageId], references: [id], onDelete: Restrict)
+  programId      String?
+  program        MentorshipProgram? @relation(fields: [programId], references: [id], onDelete: SetNull)
+  name           String
+  email          String?
+  phone          String?
+  instagram      String?
+  source         String?
+  interest       String?
+  potentialCents Int?
+  nextAction     String?
+  nextActionDate DateTime?
+  owner          String?
+  notes          String?
+  position       Float              @default(0)
+  lostReason     String?
+  wonAt          DateTime?
+  lostAt         DateTime?
+  menteeId       String?            @unique
+  mentee         Mentee?            @relation(fields: [menteeId], references: [id], onDelete: SetNull)
+  deletedAt      DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  activities LeadActivity[]
+  sales      Sale[]
+
+  @@index([workspaceId, stageId])
+}
+
+model LeadActivity {
+  id        String   @id @default(cuid())
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  // NOTE | CALL | MESSAGE | MEETING | STAGE_CHANGE
+  type      String
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([leadId, createdAt])
+}
+
+enum MenteeStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+model Mentee {
+  id              String             @id @default(cuid())
+  workspaceId     String
+  workspace       Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  programId       String?
+  program         MentorshipProgram? @relation(fields: [programId], references: [id], onDelete: SetNull)
+  name            String
+  email           String?
+  phone           String?
+  instagram       String?
+  startDate       DateTime?          @db.Date
+  expectedEndDate DateTime?          @db.Date
+  contractedCents Int?
+  paymentTerms    String?
+  status          MenteeStatus       @default(ACTIVE)
+  notes           String?
+  deletedAt       DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  lead      Lead?
+  sessions  MentoringSession[]
+  goals     MenteeGoal[]
+  materials MenteeMaterial[]
+  timeline  MenteeTimelineEntry[]
+  sales     Sale[]
+
+  @@index([workspaceId, status])
+}
+
+model MentoringSession {
+  id              String   @id @default(cuid())
+  menteeId        String
+  mentee          Mentee   @relation(fields: [menteeId], references: [id], onDelete: Cascade)
+  date            DateTime
+  durationMinutes Int?
+  // SCHEDULED | DONE | CANCELLED | NO_SHOW
+  status          String   @default("SCHEDULED")
+  summary         String?
+  nextSteps       String?
+  eventId         String?
+  createdAt       DateTime @default(now())
+
+  @@index([menteeId, date])
+}
+
+model MenteeGoal {
+  id        String    @id @default(cuid())
+  menteeId  String
+  mentee    Mentee    @relation(fields: [menteeId], references: [id], onDelete: Cascade)
+  title     String
+  progress  Int       @default(0)
+  done      Boolean   @default(false)
+  dueDate   DateTime? @db.Date
+  createdAt DateTime  @default(now())
+}
+
+model MenteeMaterial {
+  id        String   @id @default(cuid())
+  menteeId  String
+  mentee    Mentee   @relation(fields: [menteeId], references: [id], onDelete: Cascade)
+  title     String
+  url       String?
+  createdAt DateTime @default(now())
+}
+
+model MenteeTimelineEntry {
+  id        String   @id @default(cuid())
+  menteeId  String
+  mentee    Mentee   @relation(fields: [menteeId], references: [id], onDelete: Cascade)
+  date      DateTime
+  title     String
+  content   String?
+  createdAt DateTime @default(now())
+
+  @@index([menteeId, date])
+}
+
+enum SaleStatus {
+  ACTIVE
+  CANCELLED
+  REFUNDED
+}
+
+model Sale {
+  id                String             @id @default(cuid())
+  workspaceId       String
+  workspace         Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  leadId            String?
+  lead              Lead?              @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  menteeId          String?
+  mentee            Mentee?            @relation(fields: [menteeId], references: [id], onDelete: SetNull)
+  programId         String?
+  program           MentorshipProgram? @relation(fields: [programId], references: [id], onDelete: SetNull)
+  description       String
+  totalCents        Int
+  // Data da venda = competência do faturamento
+  saleDate          DateTime           @db.Date
+  // CASH | INSTALLMENTS
+  paymentType       String             @default("CASH")
+  installmentsCount Int                @default(1)
+  commissionCents   Int                @default(0)
+  refundedCents     Int                @default(0)
+  status            SaleStatus         @default(ACTIVE)
+  notes             String?
+  deletedAt         DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  receivables Receivable[]
+
+  @@index([workspaceId, saleDate])
+}
+
+enum ReceivableStatus {
+  PENDING
+  RECEIVED
+  CANCELLED
+}
+
+model Receivable {
+  id            String            @id @default(cuid())
+  saleId        String
+  sale          Sale              @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  number        Int
+  amountCents   Int
+  dueDate       DateTime          @db.Date
+  status        ReceivableStatus  @default(PENDING)
+  receivedAt    DateTime?         @db.Date
+  receivedCents Int?
+  accountId     String?
+  account       FinancialAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+
+  transaction FinancialTransaction? @relation("ReceivableTransaction")
+
+  @@unique([saleId, number])
+  @@index([status, dueDate])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Conteúdo e Instagram
+// ═══════════════════════════════════════════════════════════════
+
+model SocialConnection {
+  id             String           @id @default(cuid())
+  userId         String
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider       String           @default("meta")
+  accessTokenEnc String?
+  expiresAt      DateTime?
+  scope          String?
+  status         ConnectionStatus @default(PENDING)
+  lastSyncAt     DateTime?
+  lastError      String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  profiles SocialProfile[]
+}
+
+model SocialProfile {
+  id             String            @id @default(cuid())
+  workspaceId    String
+  workspace      Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name           String
+  username       String
+  platform       String            @default("instagram")
+  audience       String?
+  positioning    String?
+  objectives     String?
+  editorialLine  String?
+  postingGoalPerWeek Int?
+  goals          Json?
+  // Integração Meta (somente contas profissionais)
+  connectionId   String?
+  connection     SocialConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  externalUserId String?
+  archived       Boolean           @default(false)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  snapshots    ProfileMetricSnapshot[]
+  contentItems ContentItem[]
+  references   ContentReference[]
+}
+
+model ProfileMetricSnapshot {
+  id          String        @id @default(cuid())
+  profileId   String
+  profile     SocialProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  date        DateTime      @db.Date
+  followers   Int?
+  reach       Int?
+  views       Int?
+  likes       Int?
+  comments    Int?
+  shares      Int?
+  saves       Int?
+  posts       Int?
+  // MANUAL | API
+  source      String        @default("MANUAL")
+  fetchedAt   DateTime      @default(now())
+
+  @@unique([profileId, date, source])
+}
+
+model ContentStatus {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  position    Int
+  // Marca as etapas especiais usadas em indicadores
+  isRecordingScheduled Boolean @default(false)
+  isScheduled Boolean   @default(false)
+  isPublished Boolean   @default(false)
+
+  items ContentItem[]
+
+  @@index([workspaceId, position])
+}
+
+model ContentItem {
+  id            String         @id @default(cuid())
+  workspaceId   String
+  workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  profileId     String?
+  profile       SocialProfile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  statusId      String
+  status        ContentStatus  @relation(fields: [statusId], references: [id], onDelete: Restrict)
+  title         String
+  platform      String         @default("instagram")
+  format        String?
+  objective     String?
+  audience      String?
+  hook          String?
+  script        String?
+  cta           String?
+  owner         String?
+  participants  String?
+  recordingDate DateTime?
+  publishDate   DateTime?
+  publishedAt   DateTime?
+  publishedUrl  String?
+  references    String?
+  links         Json?
+  notes         String?
+  position      Float          @default(0)
+  externalMediaId String?
+  deletedAt     DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  metrics ContentMetric[]
+
+  @@index([workspaceId, statusId])
+  @@index([publishDate])
+}
+
+model ContentMetric {
+  id            String      @id @default(cuid())
+  contentItemId String
+  contentItem   ContentItem @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  date          DateTime    @db.Date
+  reach         Int?
+  views         Int?
+  likes         Int?
+  comments      Int?
+  shares        Int?
+  saves         Int?
+  followsGained Int?
+  source        String      @default("MANUAL")
+  fetchedAt     DateTime    @default(now())
+
+  @@unique([contentItemId, date, source])
+}
+
+model ContentReference {
+  id               String         @id @default(cuid())
+  workspaceId      String
+  workspace        Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  profileId        String?
+  profile          SocialProfile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  url              String
+  platform         String?
+  creator          String?
+  theme            String?
+  format           String?
+  hook             String?
+  notes            String?
+  adaptationIdeas  String?
+  tags             String[]       @default([])
+  createdAt        DateTime       @default(now())
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MAAS — Mapa de Autoavaliação Sistêmica
+// ═══════════════════════════════════════════════════════════════
+
+model MaasArea {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  position  Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  scores MaasScore[]
+
+  @@index([userId])
+}
+
+model MaasAssessment {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime @db.Date
+  notes     String?
+  createdAt DateTime @default(now())
+
+  scores MaasScore[]
+
+  @@index([userId, date])
+}
+
+model MaasScore {
+  id           String         @id @default(cuid())
+  assessmentId String
+  assessment   MaasAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  areaId       String?
+  area         MaasArea?      @relation(fields: [areaId], references: [id], onDelete: SetNull)
+  // Nome da área no momento da avaliação (preserva histórico se renomear)
+  areaName     String
+  score        Int
+  comment      String?
+  actionPlan   String?
+  goal         String?
+
+  @@unique([assessmentId, areaName])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Notificações e integrações
+// ═══════════════════════════════════════════════════════════════
+
+model Notification {
+  id          String     @id @default(cuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspaceId String?
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  // DAILY_DIGEST | WEEKLY_REVIEW | MONTHLY_REVIEW | TASK_OVERDUE | BILL_DUE | EVENT_REMINDER | INTEGRATION_ERROR
+  type        String
+  title       String
+  body        String?
+  data        Json?
+  link        String?
+  readAt      DateTime?
+  // Evita notificação repetida (ex.: "TASK_OVERDUE:<id>:<data>")
+  dedupeKey   String?    @unique
+  createdAt   DateTime   @default(now())
+
+  @@index([userId, readAt, createdAt])
+}
+
+model NotificationPreference {
+  id             String  @id @default(cuid())
+  userId         String  @unique
+  user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dailyEnabled   Boolean @default(true)
+  dailyTime      String  @default("07:00")
+  weeklyEnabled  Boolean @default(true)
+  // 0=domingo … 6=sábado
+  weeklyDay      Int     @default(0)
+  monthlyEnabled Boolean @default(true)
+  monthlyDay     Int     @default(1)
+  inAppEnabled   Boolean @default(true)
+  emailEnabled   Boolean @default(false)
+  billDueDaysBefore Int  @default(3)
+}
+
+model IntegrationSyncLog {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider   String
+  operation  String
+  // SUCCESS | ERROR | PARTIAL | SKIPPED
+  status     String
+  message    String?
+  details    Json?
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+
+  @@index([userId, provider, startedAt])
+}

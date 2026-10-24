@@ -1,0 +1,51 @@
+name: Manutenção (lockfile e migrações)
+
+# Disparado manualmente. Gera/atualiza package-lock.json e, se informado,
+# cria uma nova migração Prisma a partir do schema, fazendo commit no branch.
+on:
+  workflow_dispatch:
+    inputs:
+      migration_name:
+        description: "Nome da nova migração (vazio = não criar)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  maintain:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: gabi
+          POSTGRES_PASSWORD: gabi
+          POSTGRES_DB: gabi
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U gabi" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://gabi:gabi@localhost:5432/gabi
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Instalar dependências (atualiza lockfile)
+        run: npm install --no-audit --no-fund
+      - name: Criar migração
+        if: ${{ inputs.migration_name != '' }}
+        run: |
+          if [ -d prisma/migrations ]; then npx prisma migrate deploy; fi
+          npx prisma migrate dev --name "${{ inputs.migration_name }}" --create-only --skip-seed
+      - name: Commit
+        run: |
+          git config user.name "gabi-os-bot"
+          git config user.email "gabi-os-bot@users.noreply.github.com"
+          git add package-lock.json prisma/migrations || true
+          if git diff --cached --quiet; then echo "Nada a commitar"; exit 0; fi
+          git commit -m "chore: atualiza lockfile/migrações [manutenção]"
+          git push
