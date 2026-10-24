@@ -50,6 +50,15 @@ export function KanbanBoard({
   const [columns, setColumns] = React.useState<Columns>(() => buildColumns(statuses, tasks));
   const [activeId, setActiveId] = React.useState<string | null>(null);
   const dragOrigin = React.useRef<Columns | null>(null);
+  // O navegador dispara um "click" ao soltar o cartão; ignoramos cliques logo após um arraste
+  const lastDragEnd = React.useRef(0);
+  const open = React.useCallback(
+    (id: string) => {
+      if (Date.now() - lastDragEnd.current < 400) return;
+      onOpen(id);
+    },
+    [onOpen],
+  );
 
   // Sincroniza quando o servidor devolve dados novos (fora de um arraste)
   React.useEffect(() => {
@@ -85,6 +94,7 @@ export function KanbanBoard({
 
   const onDragEnd = async ({ active, over }: DragEndEvent) => {
     const taskId = String(active.id);
+    lastDragEnd.current = Date.now();
     setActiveId(null);
     if (!over) {
       if (dragOrigin.current) setColumns(dragOrigin.current);
@@ -126,6 +136,7 @@ export function KanbanBoard({
       onDragOver={onDragOver}
       onDragEnd={onDragEnd}
       onDragCancel={() => {
+        lastDragEnd.current = Date.now();
         setActiveId(null);
         if (dragOrigin.current) setColumns(dragOrigin.current);
       }}
@@ -141,7 +152,7 @@ export function KanbanBoard({
             ids={columns[status.id] ?? []}
             byId={byId}
             today={meta.today}
-            onOpen={onOpen}
+            onOpen={open}
             onAdd={() => onAdd(status.id)}
           />
         ))}

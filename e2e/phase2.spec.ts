@@ -35,7 +35,8 @@ test("tarefas: criar, arrastar no Kanban, detalhar e concluir", async ({ page })
   await page.mouse.move(to!.x + to!.width / 2, to!.y + 80, { steps: 15 });
   const saved = page.waitForResponse((r) => r.request().method() === "POST" && new URL(r.url()).pathname === "/tarefas");
   await page.mouse.up();
-  await (await saved).finished();
+  expect((await saved).status()).toBe(200);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(doing.locator('[data-task-title="Roteiro Reels de lançamento"]')).toBeVisible();
 
   // Persistiu no servidor

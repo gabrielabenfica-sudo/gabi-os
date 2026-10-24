@@ -82,13 +82,22 @@ export function TasksClient({
     return () => clearTimeout(t);
   }, [search, params, setParams]);
 
+  // Abrir/fechar a tarefa só atualiza o endereço (link compartilhável), sem recarregar dados
+  const setUrlOnly = (patch: Record<string, string | null>) => {
+    const url = new URL(window.location.href);
+    for (const [k, v] of Object.entries(patch)) {
+      if (v) url.searchParams.set(k, v);
+      else url.searchParams.delete(k);
+    }
+    window.history.replaceState(window.history.state, "", url);
+  };
   const openTask = (taskId: string) => {
     setDialog({ mode: "edit", taskId });
-    setParams({ t: taskId });
+    setUrlOnly({ t: taskId, nova: null });
   };
   const closeDialog = () => {
     setDialog(null);
-    if (params.get("t") || params.get("nova")) setParams({ t: null });
+    setUrlOnly({ t: null, nova: null });
   };
 
   const boardWs = meta.workspaces.find((w) => w.id === boardWorkspaceId);
