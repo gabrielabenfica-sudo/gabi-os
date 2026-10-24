@@ -149,3 +149,52 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ── FullCalendar no tema Gabi OS ─────────────────────────────── */
+.gabi-calendar .fc {
+  --fc-border-color: var(--border);
+  --fc-page-bg-color: var(--card);
+  --fc-neutral-bg-color: var(--muted);
+  --fc-today-bg-color: color-mix(in srgb, var(--brand-soft) 25%, transparent);
+  --fc-button-bg-color: var(--card);
+  --fc-button-text-color: var(--foreground);
+  --fc-button-border-color: var(--input);
+  --fc-button-hover-bg-color: var(--accent);
+  --fc-button-hover-border-color: var(--input);
+  --fc-button-active-bg-color: var(--secondary);
+  --fc-button-active-border-color: var(--input);
+  --fc-event-border-color: var(--brand);
+  --fc-now-indicator-color: var(--danger);
+  --fc-list-event-hover-bg-color: var(--accent);
+  font-size: 0.8125rem;
+}
+.gabi-calendar .fc .fc-toolbar-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.gabi-calendar .fc .fc-button {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border-radius: calc(var(--radius) - 2px);
+  box-shadow: none !important;
+  text-transform: capitalize;
+}
+.gabi-calendar .fc .fc-button-primary:not(:disabled).fc-button-active {
+  color: var(--foreground);
+}
+.gabi-calendar .fc .fc-col-header-cell-cushion,
+.gabi-calendar .fc .fc-daygrid-day-number {
+  color: var(--muted-foreground);
+  text-transform: capitalize;
+}
+.gabi-calendar .fc-event {
+  border-radius: 6px;
+  padding: 1px 4px;
+  cursor: pointer;
+}
+.gabi-calendar .fc-theme-standard td,
+.gabi-calendar .fc-theme-standard th,
+.gabi-calendar .fc-theme-standard .fc-scrollgrid {
+  border-color: var(--border);
+}

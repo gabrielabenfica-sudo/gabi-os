@@ -1,5 +1,6 @@
 import {
   LayoutDashboard,
+  ListChecks,
   Settings,
   type LucideIcon,
 } from "lucide-react";
@@ -22,6 +23,12 @@ export type NavSection = { title?: string; items: NavItem[] };
 export const NAV_SECTIONS: NavSection[] = [
   {
     items: [{ href: "/", label: "Dashboard", icon: LayoutDashboard, keywords: ["início", "home", "resumo"], shortcut: "G D" }],
+  },
+  {
+    title: "Organização",
+    items: [
+      { href: "/tarefas", label: "Tarefas", icon: ListChecks, keywords: ["kanban", "trello", "demandas", "quadro"], shortcut: "G T" },
+    ],
   },
   {
     title: "Sistema",

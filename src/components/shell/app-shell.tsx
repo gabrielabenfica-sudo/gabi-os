@@ -7,6 +7,7 @@ import { ChevronsLeft, ChevronsRight, LogOut, Monitor, Moon, Search, Settings, S
 import { cn, firstName } from "@/lib/utils";
 import { NAV_SECTIONS, ALL_NAV_ITEMS, isActive } from "./nav";
 import { CommandPalette } from "./command-palette";
+import { ConfirmProvider } from "@/components/ui/confirm";
 import { WorkspaceFilter, type ShellWorkspace } from "./workspace-filter";
 import {
   DropdownMenu,
@@ -115,6 +116,7 @@ export function AppShell({
   };
 
   return (
+    <ConfirmProvider>
     <div className="flex min-h-dvh">
       <a href="#conteudo" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-card focus:px-3 focus:py-2">
         Pular para o conteúdo
@@ -249,5 +251,6 @@ export function AppShell({
 
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
     </div>
+    </ConfirmProvider>
   );
 }
