@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/form-controls";
 import { useConfirm, usePrompt } from "@/components/ui/confirm";
 import { cn } from "@/lib/utils";
+import { AttachmentsPanel } from "@/components/attachments-panel";
 import { deleteNoteAction, getNoteAction, linkNoteAction, restoreNoteAction, saveNoteAction, searchLinkTargetsAction, unlinkNoteAction } from "./actions";
 
 type NoteData = {
@@ -225,6 +226,9 @@ export function NoteEditor({
       </div>
 
       <LinksPanel note={note} readOnly={readOnly} onChange={(links) => setNote({ ...note, links })} />
+      <div className="rounded-xl border border-border bg-card p-4">
+        <AttachmentsPanel entityType="note" entityId={note.id} readOnly={readOnly} title="Arquivos anexados" />
+      </div>
     </div>
   );
 }

@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Archive, ArchiveRestore, CheckCircle2, Copy, FileText, LayoutTemplate, Link2, Paperclip, Plus, RotateCcw, Trash2, Upload, X,
+  Archive, ArchiveRestore, CheckCircle2, Copy, FileText, LayoutTemplate, Link2, Plus, RotateCcw, Trash2, X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import { describeRRule } from "@/lib/recurrence";
 import { cn } from "@/lib/utils";
 import type { TaskDetail } from "@/server/tasks";
 import type { TaskMeta } from "./types";
+import { AttachmentsPanel } from "@/components/attachments-panel";
 import * as actions from "./actions";
 
 type DialogState = { mode: "edit"; taskId: string } | { mode: "new"; statusId?: string; dueDate?: string };
@@ -331,7 +332,7 @@ export function TaskDialog({
               <div className="grid content-start gap-5 lg:border-l lg:border-border lg:pl-6">
                 <ChecklistSection task={detail} reload={load} />
                 <SubtasksSection task={detail} reload={load} onOpenTask={onOpenTask} />
-                <AttachmentsSection taskId={detail.id} items={attachments} reload={load} />
+                <AttachmentsPanel key={attachments.map((a) => a.id).join()} entityType="task" entityId={detail.id} initial={attachments} />
                 <TimeSection task={detail} today={meta.today} reload={load} />
                 <CommentsSection task={detail} reload={load} />
                 {linkedNotes.length > 0 && (
@@ -615,91 +616,6 @@ function SubtasksSection({ task, reload, onOpenTask }: { task: TaskDetail; reloa
             return r.ok;
           }}
         />
-      )}
-    </Section>
-  );
-}
-
-function AttachmentsSection({ taskId, items, reload }: { taskId: string; items: Attachment[]; reload: () => Promise<unknown> }) {
-  const fileRef = React.useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = React.useState(false);
-  const [linkOpen, setLinkOpen] = React.useState(false);
-  const [link, setLink] = React.useState({ name: "", url: "" });
-
-  const upload = async (file: File) => {
-    setUploading(true);
-    const fd = new FormData();
-    fd.set("entityType", "task");
-    fd.set("entityId", taskId);
-    fd.set("file", file);
-    const res = await fetch("/api/attachments", { method: "POST", body: fd });
-    const body = await res.json().catch(() => ({}));
-    setUploading(false);
-    if (!res.ok) return toast.error(body.error ?? "Falha no envio.");
-    toast.success("Arquivo anexado.");
-    await reload();
-  };
-
-  return (
-    <Section
-      title="Arquivos e links"
-      action={
-        <div className="flex gap-1">
-          <input ref={fileRef} type="file" className="hidden" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} aria-label="Escolher arquivo" />
-          <Button type="button" size="sm" variant="ghost" onClick={() => fileRef.current?.click()} disabled={uploading}>
-            <Upload /> {uploading ? "Enviando…" : "Arquivo"}
-          </Button>
-          <Button type="button" size="sm" variant="ghost" onClick={() => setLinkOpen((o) => !o)}>
-            <Link2 /> Link
-          </Button>
-        </div>
-      }
-    >
-      {linkOpen && (
-        <div className="flex gap-2">
-          <Input value={link.name} onChange={(e) => setLink({ ...link, name: e.target.value })} placeholder="Nome" className="h-8 w-32" aria-label="Nome do link" />
-          <Input value={link.url} onChange={(e) => setLink({ ...link, url: e.target.value })} placeholder="https://…" className="h-8" aria-label="Endereço" />
-          <Button
-            type="button"
-            size="sm"
-            onClick={async () => {
-              const r = await actions.addLinkAttachmentAction(taskId, link.name, link.url);
-              if (!r.ok) return toast.error(r.error);
-              setLink({ name: "", url: "" });
-              setLinkOpen(false);
-              await reload();
-            }}
-          >
-            Salvar
-          </Button>
-        </div>
-      )}
-      {items.length === 0 ? (
-        <p className="text-xs text-muted-foreground">Nenhum anexo. Arquivos de até 5 MB.</p>
-      ) : (
-        <ul className="grid gap-1 text-sm">
-          {items.map((a) => (
-            <li key={a.id} className="group flex items-center gap-2">
-              {a.url ? <Link2 className="size-4 text-muted-foreground" /> : <Paperclip className="size-4 text-muted-foreground" />}
-              <a href={a.url ?? `/api/attachments/${a.id}`} target="_blank" rel="noopener noreferrer" className="flex-1 truncate hover:underline">
-                {a.name}
-              </a>
-              {a.sizeBytes ? <span className="text-xs text-muted-foreground">{Math.ceil(a.sizeBytes / 1024)} KB</span> : null}
-              <button
-                type="button"
-                className="opacity-0 group-hover:opacity-100 focus:opacity-100"
-                aria-label={`Remover ${a.name}`}
-                onClick={async () => {
-                  const r = await actions.deleteAttachmentAction(a.id);
-                  if (!r.ok) toast.error(r.error);
-                  await reload();
-                }}
-              >
-                <X className="size-4 text-muted-foreground" />
-              </button>
-            </li>
-          ))}
-        </ul>
       )}
     </Section>
   );

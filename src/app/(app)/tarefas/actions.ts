@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/server/auth/current";
 import { run } from "@/server/errors";
 import * as tasks from "@/server/tasks";
-import { addLinkAttachment, deleteAttachment, listAttachments } from "@/server/attachments";
+import { listAttachments } from "@/server/attachments";
 import { notesLinkedTo } from "@/server/notes";
 
 const refresh = () => revalidatePath("/tarefas");
@@ -154,14 +154,4 @@ export async function createLabelAction(input: { workspaceId: string; name: stri
   const r = await run(() => tasks.createLabel(u.id, input));
   if (r.ok) refresh();
   return r;
-}
-
-export async function addLinkAttachmentAction(taskId: string, name: string, url: string) {
-  const u = await requireUser();
-  return run(() => addLinkAttachment(u.id, { entityType: "task", entityId: taskId, name, url }), "Link anexado.");
-}
-
-export async function deleteAttachmentAction(id: string) {
-  const u = await requireUser();
-  return run(() => deleteAttachment(u.id, id), "Anexo removido.");
 }

@@ -51,6 +51,8 @@ test("tarefas: criar, arrastar no Kanban, detalhar e concluir", async ({ page })
   await dialog.getByLabel("Novo item da checklist").press("Enter");
   await expect(dialog.getByText("Escrever gancho")).toBeVisible();
   await expect(dialog.getByText(/Iniciada em/)).toBeVisible();
+  await dialog.getByLabel("Escolher arquivo").setInputFiles({ name: "briefing.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4 teste") });
+  await expect(dialog.getByRole("link", { name: "briefing.pdf" })).toBeVisible();
   await dialog.getByRole("button", { name: "Concluir", exact: true }).click();
   await expect(page.getByText("Tarefa concluída.").first()).toBeVisible();
   await expect(dialog.getByText(/Concluída em/)).toBeVisible();

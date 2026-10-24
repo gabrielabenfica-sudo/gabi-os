@@ -12,6 +12,7 @@ import { useConfirm } from "@/components/ui/confirm";
 import { RecurrencePicker } from "@/components/forms/recurrence-picker";
 import { EVENT_STATUS_LABEL, PRIORITY_LABEL } from "@/components/priority";
 import { ConflictDialog } from "./conflict-dialog";
+import { AttachmentsPanel } from "@/components/attachments-panel";
 import { createEventAction, deleteEventAction, getEventAction, updateEventAction } from "./actions";
 import { partsInTz, REMINDER_OPTIONS, type AgendaWs, type Conflict, type ProjectRef, type TaskRef } from "./shared";
 
@@ -266,6 +267,7 @@ export function EventDialog({
                   ))}
                 </div>
               )}
+              {isEdit && <AttachmentsPanel entityType="event" entityId={state.eventId} />}
               {values.rrule && isEdit && <p className="text-xs text-muted-foreground">Alterações em um compromisso recorrente valem para toda a série.</p>}
               <div className="flex flex-wrap items-center gap-2 border-t border-border pt-4">
                 <Button type="submit" disabled={saving || !values.title.trim()}>{saving ? "Salvando…" : isEdit ? "Salvar" : "Criar compromisso"}</Button>
