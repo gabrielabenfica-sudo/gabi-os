@@ -55,7 +55,6 @@ ambientes já configurados. Depois disso o cadastro fica fechado (a não ser que
 | `ENCRYPTION_KEY` | Sim em produção | 32 bytes em base64 para criptografar tokens de integração. Gere com `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |
 | `APP_URL` | Sim em produção | URL pública (callbacks OAuth) |
 | `ALLOW_REGISTRATION` | Não | `true` libera novos cadastros após a primeira conta |
-
 | `CRON_SECRET` | Não | Ativa o agendador `/api/cron/notifications` (o `vercel.json` já agenda 1x/dia). Sem ele, resumos e lembretes são gerados quando você abre o app |
 
 As variáveis das integrações (Google, Meta, e-mail) entram na Fase 6.
