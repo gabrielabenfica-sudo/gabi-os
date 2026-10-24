@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      e2e_repeat:
+        description: "Quantas vezes repetir a suíte E2E (diagnóstico de instabilidade)"
+        required: false
+        default: "1"
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -66,14 +71,23 @@ jobs:
       - name: Build de produção
         run: npm run build
 
-      - name: Preparar banco limpo para o E2E
-        run: npx prisma migrate reset --force --skip-seed
-
       - name: Instalar navegador do Playwright
         run: npx playwright install --with-deps chromium
 
       - name: Testes end-to-end
-        run: npm run test:e2e
+        run: |
+          for i in $(seq 1 "${{ inputs.e2e_repeat || '1' }}"); do
+            echo "── Execução E2E $i ──"
+            npx prisma migrate reset --force --skip-seed > /dev/null
+            npm run test:e2e
+          done
+
+      - name: Log do servidor (falha no E2E)
+        if: failure()
+        run: |
+          [ -f server.log ] || exit 0
+          body=$(tail -n 80 server.log | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"}{print}')
+          echo "::warning title=Log do servidor Next.js::${body}"
 
       - name: Relatório do Playwright
         if: failure()
