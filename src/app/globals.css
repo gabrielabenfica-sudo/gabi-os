@@ -1,0 +1,151 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ── Paleta Gabi OS ─────────────────────────────────────────────
+   Rosa queimado #A66F7C · Rosé #D8B7BD · Off-white #F4EFEC
+   Taupe #B8AAA4 · Grafite #373039 · Branco #FFFFFF
+   Botões usam um tom mais profundo do rosa (#8C5866) para garantir
+   contraste AA com texto branco. */
+
+:root {
+  --background: #f4efec;
+  --foreground: #373039;
+  --card: #ffffff;
+  --card-foreground: #373039;
+  --popover: #ffffff;
+  --popover-foreground: #373039;
+  --primary: #8c5866;
+  --primary-foreground: #ffffff;
+  --brand: #a66f7c;
+  --brand-soft: #d8b7bd;
+  --secondary: #efe4e5;
+  --secondary-foreground: #4a3f4c;
+  --muted: #ece5e1;
+  --muted-foreground: #675d68;
+  --accent: #f3e7e9;
+  --accent-foreground: #373039;
+  --border: #e2d9d4;
+  --input: #d9cec9;
+  --ring: #a66f7c;
+  --sidebar: #373039;
+  --sidebar-foreground: #ece5e1;
+  --sidebar-muted: #b8aaa4;
+  --sidebar-active: #4a404c;
+  --success: #3f7d5c;
+  --success-soft: #e3efe8;
+  --warning: #9a6b1f;
+  --warning-soft: #f6ecd9;
+  --danger: #b4474f;
+  --danger-soft: #f6e1e2;
+  --info: #4e6f8f;
+  --info-soft: #e1e9f1;
+  --radius: 0.625rem;
+}
+
+.dark {
+  --background: #1d191f;
+  --foreground: #f4efec;
+  --card: #27222a;
+  --card-foreground: #f4efec;
+  --popover: #2c262f;
+  --popover-foreground: #f4efec;
+  --primary: #d8b7bd;
+  --primary-foreground: #2a2330;
+  --brand: #c99aa5;
+  --brand-soft: #5a4550;
+  --secondary: #352e38;
+  --secondary-foreground: #ece5e1;
+  --muted: #302a33;
+  --muted-foreground: #b8aaa4;
+  --accent: #3a3140;
+  --accent-foreground: #f4efec;
+  --border: #3b343f;
+  --input: #463e4a;
+  --ring: #d8b7bd;
+  --sidebar: #161317;
+  --sidebar-foreground: #ece5e1;
+  --sidebar-muted: #a39591;
+  --sidebar-active: #2e2831;
+  --success: #7cc49d;
+  --success-soft: #213229;
+  --warning: #e0b260;
+  --warning-soft: #352b1a;
+  --danger: #ec8d93;
+  --danger-soft: #3a2224;
+  --info: #93b4d4;
+  --info-soft: #1f2a35;
+}
+
+@theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-active: var(--sidebar-active);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
