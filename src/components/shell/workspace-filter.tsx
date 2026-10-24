@@ -17,10 +17,13 @@ export type ShellWorkspace = { id: string; name: string; color: string; kind: st
 
 export function WorkspaceFilter({ workspaces, value }: { workspaces: ShellWorkspace[]; value: string }) {
   const [pending, startTransition] = React.useTransition();
-  const current = workspaces.find((w) => w.id === value);
+  // Mostra a escolha imediatamente enquanto o servidor salva e recarrega os dados
+  const [optimistic, setOptimistic] = React.useOptimistic(value);
+  const current = workspaces.find((w) => w.id === optimistic);
 
   const select = (id: string) =>
     startTransition(async () => {
+      setOptimistic(id);
       try {
         await setWorkspaceFilterAction(id);
       } catch {
@@ -32,7 +35,7 @@ export function WorkspaceFilter({ workspaces, value }: { workspaces: ShellWorksp
     <DropdownMenu>
       <DropdownMenuTrigger
         className="flex h-9 items-center gap-2 rounded-md border border-input bg-card px-3 text-sm hover:bg-accent disabled:opacity-60"
-        disabled={pending}
+        aria-busy={pending}
         aria-label="Filtrar por ambiente"
       >
         {current ? (
@@ -46,14 +49,14 @@ export function WorkspaceFilter({ workspaces, value }: { workspaces: ShellWorksp
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>Ambiente</DropdownMenuLabel>
         <DropdownMenuItem onSelect={() => select("all")}>
-          <Layers /> <span className="flex-1">Todos</span> {value === "all" && <Check />}
+          <Layers /> <span className="flex-1">Todos</span> {optimistic === "all" && <Check />}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         {workspaces.map((w) => (
           <DropdownMenuItem key={w.id} onSelect={() => select(w.id)}>
             <span className="size-2.5 rounded-full" style={{ background: w.color }} aria-hidden />
             <span className="flex-1">{w.name}</span>
-            {value === w.id && <Check />}
+            {optimistic === w.id && <Check />}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

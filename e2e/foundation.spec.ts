@@ -50,7 +50,10 @@ test("cadastro da administradora, persistência e configurações", async ({ pag
   // Filtro de ambiente no topo
   await page.getByRole("button", { name: "Filtrar por ambiente" }).click();
   await page.getByRole("menuitem", { name: /Pessoal Gabriela/ }).click();
-  await expect(page.getByRole("button", { name: "Filtrar por ambiente" })).toContainText("Pessoal Gabriela");
+  const filter = page.getByRole("button", { name: "Filtrar por ambiente" });
+  await expect(filter).toContainText("Pessoal Gabriela");
+  // Aguarda o servidor concluir o salvamento antes de navegar
+  await expect(filter).toHaveAttribute("aria-busy", "false", { timeout: 20_000 });
   await page.goto("/");
   await expect(page.getByText("Ambiente selecionado")).toBeVisible();
 
