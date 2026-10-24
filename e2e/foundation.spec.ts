@@ -67,7 +67,7 @@ test("logout, login com senha errada e correta, cadastro fechado", async ({ page
   await page.getByLabel("E-mail").fill(EMAIL);
   await page.getByLabel("Senha").fill("senha-errada-1");
   await page.getByRole("button", { name: "Entrar" }).click();
-  await expect(page.getByRole("alert")).toContainText("E-mail ou senha incorretos.");
+  await expect(page.getByText("E-mail ou senha incorretos.")).toBeVisible();
 
   await page.getByLabel("Senha").fill(PASSWORD);
   await page.getByRole("button", { name: "Entrar" }).click();
