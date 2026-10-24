@@ -22,6 +22,9 @@ export const test = base.extend<{ diag: string[] }>({
       page.on("response", (r) => {
         if (r.request().method() === "POST") lines.push(`${stamp()} ← ${r.status()} ${new URL(r.url()).pathname}`);
       });
+      page.on("requestfinished", (r) => {
+        if (r.method() === "POST") lines.push(`${stamp()} ✓ body done POST ${new URL(r.url()).pathname}`);
+      });
       page.on("framenavigated", (f) => {
         if (f === page.mainFrame()) lines.push(`${stamp()} nav ${new URL(f.url()).pathname}`);
       });
