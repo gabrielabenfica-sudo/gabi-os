@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 const SESSION_COOKIE = "gabi_session";
-const PUBLIC_PATHS = ["/login", "/cadastro", "/api/health"];
+const PUBLIC_PATHS = ["/login", "/cadastro", "/api/health", "/api/cron"];
 
 /**
  * Proteção de rotas na borda: sem cookie de sessão → /login.
