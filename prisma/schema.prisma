@@ -242,6 +242,8 @@ model Task {
   rrule          String?
   recurrenceParentId String?
   estimateMinutes Int?
+  // Links externos: [{ "title": "...", "url": "..." }]
+  links          Json?
   isTemplate     Boolean    @default(false)
   archivedAt     DateTime?
   deletedAt      DateTime?
