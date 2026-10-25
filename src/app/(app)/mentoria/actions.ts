@@ -44,7 +44,7 @@ export const deleteMenteeAction = async (id: string) => act((u) => mentees.delet
 export async function scheduleSessionAction(menteeId: string, input: Parameters<typeof mentees.scheduleSession>[2], allowConflict = false) {
   const u = await requireUser();
   const r = await run(() => mentees.scheduleSession(u.id, menteeId, input, u.timezone, { allowConflict }));
-  if (r.ok && r.value.saved) refresh();
+  if (r.ok && r.data.saved) refresh();
   return r;
 }
 export const updateSessionAction = async (id: string, input: { status?: string; summary?: string | null; nextSteps?: string | null }) => act((u) => mentees.updateSession(u, id, input).then(() => null), "Encontro atualizado.");

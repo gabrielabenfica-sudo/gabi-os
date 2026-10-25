@@ -243,7 +243,7 @@ function LeadDialog({
       onClose();
       return;
     }
-    setLead(r.value);
+    setLead(r.data);
   }, [leadId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   React.useEffect(() => {
@@ -379,7 +379,7 @@ function LeadForm({
         setSaving(false);
         if (!r.ok) return toast.error(r.error);
         toast.success(r.message);
-        onSaved(lead?.id ?? (r.value as string));
+        onSaved(lead?.id ?? (r.data as string));
       }}
     >
       <div className="grid gap-4 sm:grid-cols-2">
@@ -537,7 +537,7 @@ function ConvertDialog({ lead, programs, accounts, today, onClose, onDone }: { l
             });
             setSaving(false);
             if (!r.ok) return toast.error(r.error);
-            toast.success(r.value.menteeId && v.createMentee ? "Venda registrada e mentorado cadastrado." : r.message);
+            toast.success(r.data.menteeId && v.createMentee ? "Venda registrada e mentorado cadastrado." : r.message);
             onDone();
           }}
         >

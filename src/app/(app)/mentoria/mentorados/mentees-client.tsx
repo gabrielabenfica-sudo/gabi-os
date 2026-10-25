@@ -158,7 +158,7 @@ export function MenteeDialog({ workspaceId, edit, programs, today, onClose, onSa
             setSaving(false);
             if (!r.ok) return toast.error(r.error);
             toast.success(r.message);
-            onSaved(edit ? undefined : (r.value as string));
+            onSaved(edit ? undefined : (r.data as string));
           }}
         >
           <div className="grid gap-4 sm:grid-cols-2">

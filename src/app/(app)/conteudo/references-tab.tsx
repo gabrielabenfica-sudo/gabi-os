@@ -78,7 +78,7 @@ export function ReferencesTab({ references, workspaces, profiles, defaultWorkspa
                     const res = await contentFromReferenceAction(r.id);
                     if (!res.ok) return toast.error(res.error);
                     toast.success(res.message);
-                    router.push(`/conteudo?c=${res.value}`);
+                    router.push(`/conteudo?c=${res.data}`);
                   }}
                 >
                   <Sparkles /> Virar conteúdo

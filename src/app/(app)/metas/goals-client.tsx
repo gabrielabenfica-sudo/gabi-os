@@ -217,7 +217,7 @@ function GoalDialog({ edit, workspaces, defaultWorkspaceId, today, onClose, onSa
             setSaving(false);
             if (!r.ok) return toast.error(r.error);
             toast.success(r.message);
-            onSaved(edit ? undefined : (r.value as string));
+            onSaved(edit ? undefined : (r.data as string));
           }}
         >
           <div className="grid gap-4 sm:grid-cols-2">
@@ -333,7 +333,7 @@ function GoalDetailDialog({ id, today, onClose, onEdit }: { id: string; today: s
       onClose();
       return;
     }
-    setGoal(r.value);
+    setGoal(r.data);
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
   React.useEffect(() => void load(), [load]);
   const changed = async () => {

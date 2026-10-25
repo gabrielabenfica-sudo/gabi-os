@@ -43,7 +43,7 @@ export function ContentDialog({
       onClose();
       return;
     }
-    setItem(r.value);
+    setItem(r.data);
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
   React.useEffect(() => void load(), [load]);
   if (loading) return null;
@@ -72,7 +72,7 @@ export function ContentDialog({
                 onClick={async () => {
                   const r = await createLinkedNoteAction(item.workspaceId, "content", item.id, item.title);
                   if (!r.ok) return toast.error(r.error);
-                  router.push(`/anotacoes?n=${r.value}`);
+                  router.push(`/anotacoes?n=${r.data}`);
                 }}
               >
                 <NotebookPen /> Anotação

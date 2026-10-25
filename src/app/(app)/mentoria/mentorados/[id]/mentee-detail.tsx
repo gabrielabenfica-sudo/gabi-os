@@ -248,7 +248,7 @@ function ScheduleDialog({ mentee, canCalendar, today, tz, onClose }: { mentee: M
     const r = await scheduleSessionAction(mentee.id, { date: v.date, time: v.time, durationMinutes: v.durationMinutes, addToCalendar: v.addToCalendar, location: v.location || null, summary: v.summary || null }, allowConflict);
     setSaving(false);
     if (!r.ok) return toast.error(r.error);
-    if (!r.value.saved) return setConflicts(r.value.conflicts);
+    if (!r.data.saved) return setConflicts(r.data.conflicts);
     toast.success(v.addToCalendar ? "Encontro agendado e adicionado à agenda." : "Encontro agendado.");
     onClose();
     router.refresh();
@@ -571,7 +571,7 @@ function Notes({ mentee, notes }: { mentee: MenteeDetail; notes: { id: string; t
           onClick={async () => {
             const r = await createLinkedNoteAction(mentee.workspaceId, "mentee", mentee.id, `Mentoria · ${mentee.name}`);
             if (!r.ok) return toast.error(r.error);
-            router.push(`/anotacoes?n=${r.value}`);
+            router.push(`/anotacoes?n=${r.data}`);
           }}
         >
           <Plus /> Nova
