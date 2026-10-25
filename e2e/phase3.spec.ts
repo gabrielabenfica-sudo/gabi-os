@@ -66,7 +66,8 @@ test("pessoal: compra parcelada no cartão vai para 3 faturas e o pagamento não
   await expect(invoice).toContainText("(1/3)");
   await invoice.getByRole("button", { name: "Pagar fatura" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Registrar pagamento" }).click();
-  await expect(invoice).toContainText("Paga");
+  // Espera a confirmação do servidor ("Paga" também casaria com o botão "Pagar fatura")
+  await expect(page.getByText("Pagamento registrado.")).toBeVisible();
 
   // Saldo caiu pelo pagamento (700 − 300)
   await page.goto("/financas/pessoal?aba=contas");

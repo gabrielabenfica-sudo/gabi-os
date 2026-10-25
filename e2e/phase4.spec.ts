@@ -66,7 +66,7 @@ test("CRM: lead percorre o funil, recebe histórico e vira venda + mentorado", a
   await expect(sale.getByLabel("Valor total")).toHaveValue("3.000,00");
   await sale.getByLabel("Pagamento").selectOption("INSTALLMENTS");
   await sale.getByLabel("Parcelas").fill("3");
-  await expect(sale.getByText(/1ª R\$ 1\.000,00/)).toBeVisible();
+  await expect(sale.getByText(/1ª R\$\s1\.000,00/)).toBeVisible();
   await expect(sale.getByLabel("Cadastrar como mentorado")).toBeChecked();
   await sale.getByRole("button", { name: "Confirmar venda" }).click();
   await expect(page.getByText("Venda registrada e mentorado cadastrado.")).toBeVisible();
