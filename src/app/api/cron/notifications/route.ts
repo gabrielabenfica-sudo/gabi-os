@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { db } from "@/server/db";
 import { generateDueNotifications } from "@/server/notifications";
+import { syncGoogleIfStale } from "@/server/integrations/google-calendar";
+import { syncAllInstagram } from "@/server/integrations/meta";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +29,9 @@ export async function GET(request: Request) {
     } catch (e) {
       errors.push(`${u.id}: ${e instanceof Error ? e.message : String(e)}`);
     }
+    // Integrações (erros ficam registrados na própria conexão)
+    await syncGoogleIfStale(u.id, u.timezone, 30).catch(() => null);
+    if (await db.socialConnection.count({ where: { userId: u.id, provider: "meta", status: "ACTIVE" } })) await syncAllInstagram(u.id, u.timezone).catch(() => null);
   }
   return NextResponse.json({ users: users.length, created, errors });
 }

@@ -1,6 +1,7 @@
 import type { CalendarEvent, Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/server/db";
+import { pushLocalChange } from "@/server/integrations/google-calendar";
 import { AppError, NotFoundError } from "@/server/errors";
 import { accessibleWorkspaceIds, requireWorkspaceAccess } from "@/server/workspaces";
 import { addDaysYmd, ymdToDate, zonedToUtc } from "@/lib/dates";
@@ -233,6 +234,7 @@ export async function createEvent(userId: string, input: EventInput, tz: string,
   const conflicts = await findConflicts(userId, { ...times, allDay: row.allDay, transparency: row.transparency, rrule: row.rrule, timezone: tz });
   if (conflicts.length && !opts.allowConflict) return { saved: false, conflicts };
   const event = await db.calendarEvent.create({ data: row });
+  await pushLocalChange(userId, event.id);
   return { saved: true, event, conflicts };
 }
 
@@ -264,6 +266,7 @@ export async function updateEvent(userId: string, eventId: string, input: EventI
   );
   if (conflicts.length && !opts.allowConflict) return { saved: false, conflicts };
   const event = await db.calendarEvent.update({ where: { id: eventId }, data: { ...row, ...syncPatch(existing) } });
+  await pushLocalChange(userId, event.id);
   return { saved: true, event, conflicts };
 }
 
@@ -299,6 +302,7 @@ export async function rescheduleEvent(
     where: { id: eventId },
     data: { start, end, allDay: parsed.allDay, transparency, ...syncPatch(existing) },
   });
+  await pushLocalChange(userId, event.id);
   return { saved: true, event, conflicts };
 }
 
@@ -306,7 +310,8 @@ export async function rescheduleEvent(
 export async function setEventStatus(userId: string, eventId: string, status: CalendarEvent["status"]) {
   const existing = await loadForWrite(userId, eventId);
   z.enum(["NOT_STARTED", "IN_PROGRESS", "DONE", "CANCELLED"]).parse(status);
-  return db.calendarEvent.update({ where: { id: eventId }, data: { status, ...syncPatch(existing) } });
+  void existing;
+  return db.calendarEvent.update({ where: { id: eventId }, data: { status } });
 }
 
 export async function deleteEvent(userId: string, eventId: string) {
@@ -315,6 +320,7 @@ export async function deleteEvent(userId: string, eventId: string) {
     where: { id: eventId },
     data: { deletedAt: new Date(), ...(existing.externalId ? { syncState: "PENDING_DELETE" } : {}) },
   });
+  if (existing.externalId) await pushLocalChange(userId, eventId);
 }
 
 export async function getEvent(userId: string, eventId: string) {

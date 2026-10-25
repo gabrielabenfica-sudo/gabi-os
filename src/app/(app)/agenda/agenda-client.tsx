@@ -11,6 +11,7 @@ import { PageHeader, Segmented, WsDot } from "@/components/ui/misc";
 import { cn } from "@/lib/utils";
 import { addDaysYmd } from "@/lib/dates";
 import { listOccurrencesAction, rescheduleEventAction } from "./actions";
+import { syncCalendarsIfStaleAction } from "../configuracoes/integracoes/actions";
 import { EventDialog, type EventDialogState } from "./event-dialog";
 import { ConflictDialog } from "./conflict-dialog";
 import { TimelineView } from "./timeline-view";
@@ -86,6 +87,13 @@ export function AgendaClient({
   React.useEffect(() => {
     void load();
   }, [load]);
+
+  // Google Calendar: sincroniza ao abrir a agenda se a última vez foi há mais de 10 minutos
+  React.useEffect(() => {
+    void syncCalendarsIfStaleAction().then((r) => {
+      if (r.changed) void load();
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const changeView = (v: View) => {
     setView(v);

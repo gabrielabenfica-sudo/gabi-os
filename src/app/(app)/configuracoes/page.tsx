@@ -96,6 +96,18 @@ export default async function SettingsPage() {
 
         <Card>
           <CardHeader>
+            <CardTitle>Integrações</CardTitle>
+            <CardDescription>Google Calendar, Instagram (Meta) e importação de extratos bancários.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="outline">
+              <a href="/configuracoes/integracoes">Gerenciar integrações</a>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
             <CardTitle>Seus dados</CardTitle>
             <CardDescription>
               Baixe uma cópia completa dos seus dados em JSON (sem senhas nem tokens de integração).
