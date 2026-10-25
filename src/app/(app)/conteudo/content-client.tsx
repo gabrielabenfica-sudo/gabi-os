@@ -37,6 +37,12 @@ export function ContentClient({
     openId ? { kind: "item", id: openId } : openNew ? { kind: "item" } : null,
   );
 
+  // Navegar para ?c=… (busca, referências) com a página já aberta também abre o conteúdo
+  React.useEffect(() => {
+    if (openId) setDialog({ kind: "item", id: openId });
+    else if (openNew) setDialog({ kind: "item" });
+  }, [openId, openNew]);
+
   const href = React.useCallback(
     (patch: Record<string, string | null>) => {
       const p = new URLSearchParams(params.toString());

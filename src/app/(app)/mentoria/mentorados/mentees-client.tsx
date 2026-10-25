@@ -34,6 +34,9 @@ export function MenteesClient({ workspaceId, mentees, status, programs, today, t
   const params = useSearchParams();
   const [search, setSearch] = React.useState(params.get("q") ?? "");
   const [creating, setCreating] = React.useState(openNew);
+  React.useEffect(() => {
+    if (openNew) setCreating(true);
+  }, [openNew]);
   const href = (patch: Record<string, string | null>) => {
     const p = new URLSearchParams(params.toString());
     for (const [k, v] of Object.entries(patch)) v === null ? p.delete(k) : p.set(k, v);

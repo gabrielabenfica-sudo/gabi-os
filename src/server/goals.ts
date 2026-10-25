@@ -312,7 +312,8 @@ async function loadForWrite(userId: string, goalId: string) {
 
 export async function updateGoal(userId: string, goalId: string, input: Omit<GoalInput, "workspaceId" | "steps">) {
   const before = await loadForWrite(userId, goalId);
-  const data = goalSchema.parse({ ...input, workspaceId: before.workspaceId });
+  // Editar não transforma objetivo em meta (nem o contrário) sem pedir
+  const data = goalSchema.parse({ ...input, workspaceId: before.workspaceId, isObjective: input.isObjective ?? before.isObjective });
   await assertMetricFits(before.workspace, data.autoMetric);
   const fields = goalData(data);
   return db.goal.update({ where: { id: goalId }, data: { ...fields, ...(fields.autoMetric ? { currentValue: null } : {}) } });

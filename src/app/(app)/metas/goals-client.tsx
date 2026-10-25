@@ -24,11 +24,19 @@ type Ws = { id: string; name: string; color: string; kind: string };
 const br = (s: string | null) => (s ? s.split("-").reverse().join("/") : "—");
 const SITUATION_VARIANT = { ACHIEVED: "success", ON_TRACK: "info", BEHIND: "warning", WITHIN_LIMIT: "info", OVER_LIMIT: "danger", NO_DATA: "outline", ENDED_MISSED: "danger" } as const;
 
-export function GoalsClient({ goals, status, workspaces, defaultWorkspaceId, today, openId, openNew }: { goals: GoalView[]; status: string; workspaces: Ws[]; defaultWorkspaceId: string; today: string; openId: string | null; openNew: boolean }) {
+export function GoalsClient({
+  goals, status, workspaces, defaultWorkspaceId, today, openId, openNew, mode = "goals", categories = [],
+}: { goals: GoalView[]; status: string; workspaces: Ws[]; defaultWorkspaceId: string; today: string; openId: string | null; openNew: boolean; mode?: "goals" | "objectives"; categories?: string[] }) {
+  const objectives = mode === "objectives";
+  const noun = objectives ? { one: "objetivo", new: "Novo objetivo", none: "Nenhum objetivo" } : { one: "meta", new: "Nova meta", none: "Nenhuma meta" };
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const [dialog, setDialog] = React.useState<{ kind: "form"; edit?: GoalView } | { kind: "detail"; id: string } | null>(openId ? { kind: "detail", id: openId } : openNew ? { kind: "form" } : null);
+  React.useEffect(() => {
+    if (openId) setDialog({ kind: "detail", id: openId });
+    else if (openNew) setDialog({ kind: "form" });
+  }, [openId, openNew]);
   const href = (patch: Record<string, string | null>) => {
     const p = new URLSearchParams(params.toString());
     for (const [k, v] of Object.entries(patch)) v === null ? p.delete(k) : p.set(k, v);
@@ -46,9 +54,13 @@ export function GoalsClient({ goals, status, workspaces, defaultWorkspaceId, tod
   return (
     <div className="grid gap-5">
       <PageHeader
-        title="Metas"
-        description="Metas financeiras, profissionais, comerciais, de conteúdo e pessoais — com progresso calculado a partir dos seus dados."
-        actions={<Button onClick={() => setDialog({ kind: "form" })}><Plus /> Nova meta</Button>}
+        title={objectives ? "Objetivos" : "Metas"}
+        description={
+          objectives
+            ? "Objetivos pessoais de longo prazo, organizados pelas áreas do MAAS, com etapas e progresso."
+            : "Metas financeiras, profissionais, comerciais, de conteúdo e pessoais — com progresso calculado a partir dos seus dados."
+        }
+        actions={<Button onClick={() => setDialog({ kind: "form" })}><Plus /> {noun.new}</Button>}
       />
       <div className="flex flex-wrap items-center gap-2">
         <Segmented
@@ -62,16 +74,20 @@ export function GoalsClient({ goals, status, workspaces, defaultWorkspaceId, tod
           {GOAL_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
         </Select>
         {goals.length > 0 && status === "ACTIVE" && (
-          <p className="ml-auto text-sm text-muted-foreground">{goals.length} meta(s) · {counts.achieved} atingida(s) · {counts.behind} pedem atenção</p>
+          <p className="ml-auto text-sm text-muted-foreground">{goals.length} {noun.one}(s) · {counts.achieved} atingido(s) · {counts.behind} pedem atenção</p>
         )}
       </div>
 
       {goals.length === 0 ? (
         <EmptyState
           icon={Target}
-          title={status === "ACTIVE" ? "Nenhuma meta ativa" : "Nenhuma meta aqui"}
-          description="Crie uma meta. Faturamento, lucro, reservas, conteúdos publicados, tarefas e hábitos podem ser calculados automaticamente."
-          action={<Button onClick={() => setDialog({ kind: "form" })}><Plus /> Nova meta</Button>}
+          title={status === "ACTIVE" ? `${noun.none} ativo(a)` : `${noun.none} aqui`}
+          description={
+            objectives
+              ? "Defina o que você quer construir em cada área da vida. Dica: no MAAS, o plano de ação de uma área vira objetivo com um clique."
+              : "Crie uma meta. Faturamento, lucro, reservas, conteúdos publicados, tarefas e hábitos podem ser calculados automaticamente."
+          }
+          action={<Button onClick={() => setDialog({ kind: "form" })}><Plus /> {noun.new}</Button>}
         />
       ) : (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3" data-testid="goals">
@@ -81,6 +97,8 @@ export function GoalsClient({ goals, status, workspaces, defaultWorkspaceId, tod
 
       {dialog?.kind === "form" && (
         <GoalDialog
+          objectives={objectives}
+          categories={categories}
           edit={dialog.edit}
           workspaces={workspaces}
           defaultWorkspaceId={defaultWorkspaceId}
@@ -122,7 +140,7 @@ function GoalCard({ goal, onOpen }: { goal: GoalView; onOpen: () => void }) {
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <p className="font-medium leading-snug">{goal.title}</p>
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><WsDot color={goal.workspace.color} /> {goal.workspace.name} · {goalTypeLabel(goal.type)}</p>
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><WsDot color={goal.workspace.color} /> {goal.workspace.name} · {goal.category ?? goalTypeLabel(goal.type)}</p>
           </div>
           {goal.status === "ACTIVE" ? <Badge variant={SITUATION_VARIANT[goal.situation]}>{SITUATION_LABEL[goal.situation]}</Badge> : <Badge variant="outline">{GOAL_STATUS_LABEL[goal.status]}</Badge>}
         </div>
@@ -152,23 +170,25 @@ function GoalCard({ goal, onOpen }: { goal: GoalView; onOpen: () => void }) {
 // Formulário
 // ═══════════════════════════════════════════════════════════════
 
-function GoalDialog({ edit, workspaces, defaultWorkspaceId, today, onClose, onSaved }: { edit?: GoalView; workspaces: Ws[]; defaultWorkspaceId: string; today: string; onClose: () => void; onSaved: (id?: string) => void }) {
+function GoalDialog({
+  edit, workspaces, defaultWorkspaceId, today, onClose, onSaved, objectives = false, categories = [],
+}: { edit?: GoalView; workspaces: Ws[]; defaultWorkspaceId: string; today: string; onClose: () => void; onSaved: (id?: string) => void; objectives?: boolean; categories?: string[] }) {
   const [v, setV] = React.useState({
-    workspaceId: edit?.workspace.id ?? defaultWorkspaceId,
-    type: edit?.type ?? "FINANCIAL",
+    workspaceId: edit?.workspace.id ?? (objectives ? workspaces.find((w) => w.kind === "PESSOAL")?.id ?? defaultWorkspaceId : defaultWorkspaceId),
+    type: edit?.type ?? (objectives ? "PERSONAL" : "FINANCIAL"),
     title: edit?.title ?? "",
     description: edit?.description ?? "",
     category: edit?.category ?? "",
-    measure: (edit?.measure ?? "QUANTITATIVE") as "QUANTITATIVE" | "QUALITATIVE",
+    measure: (edit?.measure ?? (objectives ? "QUALITATIVE" : "QUANTITATIVE")) as "QUANTITATIVE" | "QUALITATIVE",
     direction: (edit?.direction ?? "UP") as "UP" | "DOWN",
     unit: edit?.unit ?? "",
     startValue: edit?.startValue?.toString() ?? "",
     targetValue: edit?.targetValue?.toString() ?? "",
     currentValue: edit && !edit.autoMetric ? edit.currentValue?.toString() ?? "" : "",
     autoMetric: edit?.autoMetric ?? "",
-    horizon: edit?.horizon ?? "MONTHLY",
-    startDate: edit?.startDate ?? horizonDates("MONTHLY", today)!.start,
-    dueDate: edit?.dueDate ?? horizonDates("MONTHLY", today)!.end,
+    horizon: edit?.horizon ?? (objectives ? "YEARLY" : "MONTHLY"),
+    startDate: edit?.startDate ?? horizonDates(objectives ? "YEARLY" : "MONTHLY", today)!.start,
+    dueDate: edit?.dueDate ?? horizonDates(objectives ? "YEARLY" : "MONTHLY", today)!.end,
     owner: edit?.owner ?? "",
     notes: edit?.notes ?? "",
     steps: "",
@@ -185,7 +205,7 @@ function GoalDialog({ edit, workspaces, defaultWorkspaceId, today, onClose, onSa
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[92dvh] max-w-2xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{edit ? "Editar meta" : "Nova meta"}</DialogTitle>
+          <DialogTitle>{edit ? (objectives ? "Editar objetivo" : "Editar meta") : objectives ? "Novo objetivo" : "Nova meta"}</DialogTitle>
           <DialogDescription>Quantitativa (com valor-alvo) ou qualitativa (avança pelas etapas).</DialogDescription>
         </DialogHeader>
         <form
@@ -213,7 +233,7 @@ function GoalDialog({ edit, workspaces, defaultWorkspaceId, today, onClose, onSa
             };
             const r = edit
               ? await updateGoalAction(edit.id, input)
-              : await createGoalAction({ ...input, workspaceId: v.workspaceId, steps: v.measure === "QUALITATIVE" ? v.steps.split("\n").map((s) => s.trim()).filter(Boolean) : undefined });
+              : await createGoalAction({ ...input, isObjective: objectives, workspaceId: v.workspaceId, steps: v.measure === "QUALITATIVE" ? v.steps.split("\n").map((s) => s.trim()).filter(Boolean) : undefined });
             setSaving(false);
             if (!r.ok) return toast.error(r.error);
             toast.success(r.message);
@@ -299,13 +319,16 @@ function GoalDialog({ edit, workspaces, defaultWorkspaceId, today, onClose, onSa
                 <Textarea id="gl-steps" value={v.steps} onChange={(e) => set("steps", e.target.value)} rows={4} />
               </Field>
             )}
-            <Field label="Categoria" htmlFor="gl-cat"><Input id="gl-cat" value={v.category} onChange={(e) => set("category", e.target.value)} maxLength={60} /></Field>
+            <Field label={objectives ? "Área da vida" : "Categoria"} htmlFor="gl-cat">
+              <Input id="gl-cat" list="gl-cats" value={v.category} onChange={(e) => set("category", e.target.value)} maxLength={60} />
+              <datalist id="gl-cats">{categories.map((c) => <option key={c} value={c} />)}</datalist>
+            </Field>
             <Field label="Responsável" htmlFor="gl-owner"><Input id="gl-owner" value={v.owner} onChange={(e) => set("owner", e.target.value)} maxLength={100} /></Field>
             <Field label="Descrição" htmlFor="gl-desc" className="sm:col-span-2"><Textarea id="gl-desc" value={v.description} onChange={(e) => set("description", e.target.value)} rows={2} /></Field>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-            <Button type="submit" disabled={saving}>{edit ? "Salvar" : "Criar meta"}</Button>
+            <Button type="submit" disabled={saving}>{edit ? "Salvar" : objectives ? "Criar objetivo" : "Criar meta"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

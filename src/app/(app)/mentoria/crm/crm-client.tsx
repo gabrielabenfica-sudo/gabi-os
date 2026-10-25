@@ -49,6 +49,11 @@ export function CrmClient({
     openLeadId ? { kind: "lead", id: openLeadId } : openNew ? { kind: "lead" } : null,
   );
 
+  React.useEffect(() => {
+    if (openLeadId) setDialog({ kind: "lead", id: openLeadId });
+    else if (openNew) setDialog({ kind: "lead" });
+  }, [openLeadId, openNew]);
+
   const href = React.useCallback(
     (patch: Record<string, string | null>) => {
       const p = new URLSearchParams(params.toString());
