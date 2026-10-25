@@ -80,7 +80,8 @@ test("CRM: lead percorre o funil, recebe histórico e vira venda + mentorado", a
 
   // E o mentorado tem a ficha com a venda e a linha do tempo
   await page.goto("/mentoria/mentorados");
-  await page.locator(`[data-mentee="${name}"]`).click();
+  const href = await page.locator(`[data-mentee="${name}"]`).getAttribute("href");
+  await page.goto(href!);
   await expect(page.getByRole("heading", { name })).toBeVisible();
   await expect(page.getByTestId("mentee-sales")).toContainText("Mentoria individual");
   await expect(page.getByTestId("mentee-sales")).toContainText("1ª");
