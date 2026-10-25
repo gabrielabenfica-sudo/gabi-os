@@ -78,9 +78,10 @@ quando não há como rodar o npm localmente.
 - Variáveis no Render: `DATABASE_URL` (pooler), `DIRECT_URL`, `ENCRYPTION_KEY`, `APP_URL`,
   `CRON_SECRET`, `ALLOW_REGISTRATION=false`, `NODE_VERSION=22`. Nunca commitar segredos.
 - Plano free dorme após 15 min sem uso (primeira abertura ~50 s).
-- Pendente: agendar `GET /api/cron/notifications` com `Authorization: Bearer $CRON_SECRET`
-  (ex.: GitHub Actions agendado com o segredo `CRON_SECRET`). Sem isso, resumos e sincronizações
-  rodam quando a usuária abre o app.
+- Agendador: `.github/workflows/cron.yml` chama `GET /api/cron/notifications` com
+  `Authorization: Bearer $CRON_SECRET` a cada 15 min (06:00–23:45 de Brasília). Exige o segredo
+  `CRON_SECRET` no GitHub (mesmo valor do Render); a URL vem da variável `APP_URL` do repositório
+  (padrão: a do Render). O GitHub desativa agendamentos após 60 dias sem commits no repositório.
 
 ## Commits
 

@@ -55,8 +55,7 @@ ambientes já configurados. Depois disso o cadastro fica fechado (a não ser que
 | `ENCRYPTION_KEY` | Sim em produção | 32 bytes em base64 para criptografar tokens de integração. Gere com `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |
 | `APP_URL` | Sim em produção | URL pública (callbacks OAuth) |
 | `ALLOW_REGISTRATION` | Não | `true` libera novos cadastros após a primeira conta |
-| `CRON_SECRET` | Não | Ativa o agendador `/api/cron/notifications` (o `vercel.json` já agenda 1x/dia). Sem ele, resumos e lembretes são gerados quando você abre o app |
-
+| `CRON_SECRET` | Não | Ativa o agendador `/api/cron/notifications`. O workflow **Agendador** (`.github/workflows/cron.yml`) chama a rota a cada 15 min das 6h às 23h45 (Brasília) usando o segredo `CRON_SECRET` do repositório. Sem ele, resumos e lembretes são gerados quando você abre o app |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Não | Google Calendar. No Google Cloud: ative a Calendar API e crie um ID do cliente OAuth (aplicativo da Web) com redirecionamento `APP_URL/api/integrations/google/callback` |
 | `META_APP_ID` / `META_APP_SECRET` | Não | Instagram. App em developers.facebook.com com Login do Facebook para Empresas, permissões `instagram_basic`, `instagram_manage_insights`, `pages_show_list`, `pages_read_engagement`, `business_management`; redirecionamento `APP_URL/api/integrations/meta/callback` |
 

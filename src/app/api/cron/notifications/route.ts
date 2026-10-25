@@ -8,7 +8,7 @@ import { syncAllInstagram } from "@/server/integrations/meta";
 export const dynamic = "force-dynamic";
 
 /**
- * Agendador (ex.: Vercel Cron a cada 15 minutos). Exige o cabeçalho
+ * Agendador (workflow .github/workflows/cron.yml, a cada 15 minutos). Exige o cabeçalho
  * Authorization: Bearer <CRON_SECRET>. Sem CRON_SECRET configurado, fica desativado.
  * As notificações também são geradas quando a usuária abre o app.
  */
