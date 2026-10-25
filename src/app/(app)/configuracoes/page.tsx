@@ -96,6 +96,18 @@ export default async function SettingsPage() {
 
         <Card>
           <CardHeader>
+            <CardTitle>Equipe</CardTitle>
+            <CardDescription>Convide colaboradores para um ambiente e escolha os módulos que cada pessoa vê.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="outline">
+              <a href="/configuracoes/equipe">Gerenciar equipe</a>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
             <CardTitle>Integrações</CardTitle>
             <CardDescription>Google Calendar, Instagram (Meta) e importação de extratos bancários.</CardDescription>
           </CardHeader>

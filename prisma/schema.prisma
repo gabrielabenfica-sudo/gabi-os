@@ -53,6 +53,7 @@ model User {
   maasAssessments   MaasAssessment[]
   importBatches     ImportBatch[]
   reviews           Review[]
+  invitationsSent   Invitation[]
 }
 
 model Session {
@@ -130,6 +131,7 @@ model Workspace {
   notifications  Notification[]
   attachments    Attachment[]
   importBatches  ImportBatch[]
+  invitations    Invitation[]
 
   @@index([ownerId])
 }
@@ -1376,6 +1378,24 @@ model MaasScore {
   goal         String?
 
   @@unique([assessmentId, areaName])
+}
+
+// Convite para colaborar em um ambiente (link com token; só o hash fica salvo)
+model Invitation {
+  id          String     @id @default(cuid())
+  workspaceId String
+  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  email       String
+  role        MemberRole @default(EDITOR)
+  modules     String[]   @default([])
+  tokenHash   String     @unique
+  invitedById String
+  invitedBy   User       @relation(fields: [invitedById], references: [id], onDelete: Cascade)
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  createdAt   DateTime   @default(now())
+
+  @@index([workspaceId])
 }
 
 // Revisão semanal/mensal escrita pela usuária (os números vêm dos módulos)
