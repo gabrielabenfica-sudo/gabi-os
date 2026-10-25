@@ -18,7 +18,7 @@ test("pessoal: conta, despesa paga e saldo", async ({ page }) => {
   await page.getByRole("button", { name: "Cadastrar conta" }).click();
   const d = page.getByRole("dialog");
   await d.getByLabel("Nome", { exact: true }).fill("Nubank");
-  await d.getByLabel("Saldo inicial").fill("1.000,00");
+  await d.getByLabel("Saldo inicial", { exact: true }).fill("1.000,00");
   await d.getByRole("button", { name: "Salvar" }).click();
   await expect(page.getByTestId("accounts")).toContainText("Nubank");
   await expect(page.getByTestId("accounts")).toContainText("R$ 1.000,00");
@@ -129,7 +129,7 @@ test("Mentoria: venda à vista recebida, retirada para o pessoal e consolidado",
   await page.getByRole("button", { name: "Transferir" }).click();
   const t = page.getByRole("dialog");
   await t.getByLabel("Para").selectOption({ label: "Nubank (Pessoal Gabriela)" });
-  await t.getByLabel("Valor").fill("500");
+  await t.getByLabel("Valor", { exact: true }).fill("500");
   await expect(t.getByText(/Retirada da Mentoria: entra como receita/)).toBeVisible();
   await t.getByRole("button", { name: "Transferir" }).click();
   await expect(page.getByTestId("accounts")).toContainText("R$ 1.500,00");
