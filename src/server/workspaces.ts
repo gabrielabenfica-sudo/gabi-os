@@ -117,3 +117,14 @@ export async function reorderWorkspaces(userId: string, orderedIds: string[]) {
 }
 
 export const WORKSPACE_FILTER_COOKIE = "gabi_ws";
+
+/** Primeiro ambiente do tipo informado em que a usuária tem acesso ao módulo. */
+export async function findModuleWorkspace(userId: string, kind: WorkspaceKind, module: ModuleKey) {
+  const members = await db.workspaceMember.findMany({
+    where: { userId, workspace: { kind } },
+    include: { workspace: true },
+    orderBy: { workspace: { position: "asc" } },
+  });
+  const m = members.find((x) => x.role === "OWNER" || x.role === "ADMIN" || x.modules.includes(module));
+  return m?.workspace ?? null;
+}
