@@ -1,0 +1,43 @@
+name: Agendador (notificações e sincronizações)
+
+# Chama GET /api/cron/notifications no app publicado, que gera resumos, lembretes de
+# compromissos e avisos de contas e sincroniza Google Calendar e Instagram.
+# Precisa do segredo CRON_SECRET (o mesmo valor configurado no Render).
+# A URL vem da variável APP_URL do repositório; sem ela, usa a do Render.
+on:
+  schedule:
+    # A cada 15 minutos das 06:00 às 23:45 de Brasília (09:00–02:45 UTC)
+    - cron: "*/15 0-2,9-23 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: cron
+  cancel-in-progress: false
+
+jobs:
+  notificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      APP_URL: ${{ vars.APP_URL || 'https://gabi-os.onrender.com' }}
+    steps:
+      - name: Chamar o agendador
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error title=CRON_SECRET ausente::Cadastre o segredo CRON_SECRET em Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          # O plano free do Render dorme sem uso; a primeira resposta pode levar ~50 s.
+          status=$(curl -sS -o resposta.json -w "%{http_code}" \
+            --max-time 150 --retry 3 --retry-delay 10 --retry-all-errors \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "${APP_URL%/}/api/cron/notifications")
+          cat resposta.json; echo
+          if [ "$status" != "200" ]; then
+            echo "::error title=Agendador falhou::HTTP $status"
+            exit 1
+          fi
+          if grep -q '"errors":\[[^]]' resposta.json; then
+            echo "::warning title=Erros ao gerar notificações::$(cat resposta.json)"
+          fi
