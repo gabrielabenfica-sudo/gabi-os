@@ -4,7 +4,7 @@ import { findModuleWorkspace, requireWorkspaceAccess } from "@/server/workspaces
 import { crmMetrics, listLeads, listSources, listStages } from "@/server/crm";
 import { listAccounts } from "@/server/finance/accounts";
 import { listPrograms } from "@/server/finance/sales";
-import { EmptyState } from "@/components/ui/misc";
+import { EmptyState } from "@/components/ui/empty-state";
 import { startOfMonthYmd, todayYmd } from "@/lib/dates";
 import { CrmClient } from "./crm-client";
 

@@ -3,7 +3,7 @@ import { requireUser } from "@/server/auth/current";
 import { findModuleWorkspace, requireWorkspaceAccess } from "@/server/workspaces";
 import { listMentees } from "@/server/mentees";
 import { listPrograms } from "@/server/finance/sales";
-import { EmptyState } from "@/components/ui/misc";
+import { EmptyState } from "@/components/ui/empty-state";
 import { todayYmd } from "@/lib/dates";
 import { MenteesClient } from "./mentees-client";
 

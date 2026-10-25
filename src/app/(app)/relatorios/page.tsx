@@ -1,7 +1,7 @@
 import { requireUser } from "@/server/auth/current";
 import { consolidatedReport } from "@/server/reports";
 import { errorMessage } from "@/server/errors";
-import { EmptyState } from "@/components/ui/misc";
+import { EmptyState } from "@/components/ui/empty-state";
 import { addMonthsYmd, endOfMonthYmd, startOfMonthYmd, todayYmd } from "@/lib/dates";
 import { ReportsClient, type Preset } from "./reports-client";
 

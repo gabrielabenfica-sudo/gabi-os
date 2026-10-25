@@ -3,7 +3,7 @@ import { ArrowLeft } from "lucide-react";
 import { requireUser } from "@/server/auth/current";
 import { listWorkspaces } from "@/server/workspaces";
 import { listTeam } from "@/server/team";
-import { EmptyState } from "@/components/ui/misc";
+import { EmptyState } from "@/components/ui/empty-state";
 import { TeamClient } from "./team-client";
 
 export const metadata = { title: "Equipe" };

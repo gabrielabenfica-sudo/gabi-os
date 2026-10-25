@@ -3,7 +3,7 @@ import { requireUser } from "@/server/auth/current";
 import { accessibleWorkspaceIds, listWorkspaces } from "@/server/workspaces";
 import { listGoals } from "@/server/goals";
 import { listAreas } from "@/server/maas";
-import { EmptyState } from "@/components/ui/misc";
+import { EmptyState } from "@/components/ui/empty-state";
 import { todayYmd } from "@/lib/dates";
 import { GoalsClient } from "../metas/goals-client";
 

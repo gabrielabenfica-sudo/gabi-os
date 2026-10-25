@@ -4,7 +4,7 @@ import { db } from "@/server/db";
 import { accessibleWorkspaceIds, listWorkspaces } from "@/server/workspaces";
 import { getWorkspaceFilter } from "@/server/workspace-filter";
 import { contentReport, listContent, listProfiles, listReferences, profileOverview } from "@/server/content";
-import { EmptyState } from "@/components/ui/misc";
+import { EmptyState } from "@/components/ui/empty-state";
 import { addDaysYmd, endOfMonthYmd, isValidYm, startOfMonthYmd, todayYmd } from "@/lib/dates";
 import { ContentClient, type ContentTab } from "./content-client";
 

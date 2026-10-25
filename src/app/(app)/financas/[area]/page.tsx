@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { Wallet } from "lucide-react";
 import { requireUser } from "@/server/auth/current";
-import { EmptyState } from "@/components/ui/misc";
+import { EmptyState } from "@/components/ui/empty-state";
 import { findFinanceWorkspace, monthRange } from "@/server/finance/common";
 import { listAccounts, listTransfers, transferTargets } from "@/server/finance/accounts";
 import { listCategories } from "@/server/finance/categories";

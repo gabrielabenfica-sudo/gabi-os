@@ -1,6 +1,6 @@
 import { Wallet } from "lucide-react";
 import { requireUser } from "@/server/auth/current";
-import { EmptyState } from "@/components/ui/misc";
+import { EmptyState } from "@/components/ui/empty-state";
 import { findFinanceWorkspace } from "@/server/finance/common";
 import { compensationYear } from "@/server/finance/compensation";
 import { listAccounts } from "@/server/finance/accounts";
