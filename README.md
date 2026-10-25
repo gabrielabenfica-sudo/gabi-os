@@ -11,11 +11,11 @@ Aplicativo web de gestão pessoal, profissional, financeira e estratégica, com 
 | 2 — Organização | Dashboard com indicadores reais, agenda com conflitos, tarefas/Kanban, anotações, hábitos, notificações, busca global, anexos | ✅ Implementada e testada no CI |
 | 3 — Financeiro | Contas, receitas, despesas, cartões, parcelamentos, remuneração TURBO, financeiro Mentoria, Empresa e Resultados | ✅ Implementada e testada no CI |
 | 4 — Gestão profissional | CRM, leads, mentorados, conteúdo, calendário editorial, perfis, metas | ✅ Implementada e testada no CI |
-| 5 — Desenvolvimento pessoal | MAAS, objetivos, relatórios, revisões | ⏳ Próxima |
-| 6 — Integrações | Google Calendar, Instagram (Meta), Open Finance, importação OFX/CSV | ⏳ |
-| 7 — Validação | Revisão de segurança, UX, financeira, documentação final | ⏳ |
+| 5 — Desenvolvimento pessoal | MAAS, objetivos, revisões, relatório consolidado | ✅ Implementada e testada no CI |
+| 6 — Integrações | Importação OFX/CSV com conciliação; Google Calendar e Instagram (Meta) | ✅ Implementada; Google/Meta testados com respostas simuladas (ver abaixo) |
+| 7 — Validação | Equipe e permissões, revisão de segurança, testes de isolamento, documentação | ✅ |
 
-O menu só mostra módulos já implementados. Nenhuma tela é decorativa.
+Nenhuma tela é decorativa: todos os números vêm de registros reais.
 
 ## Stack
 
@@ -57,7 +57,10 @@ ambientes já configurados. Depois disso o cadastro fica fechado (a não ser que
 | `ALLOW_REGISTRATION` | Não | `true` libera novos cadastros após a primeira conta |
 | `CRON_SECRET` | Não | Ativa o agendador `/api/cron/notifications` (o `vercel.json` já agenda 1x/dia). Sem ele, resumos e lembretes são gerados quando você abre o app |
 
-As variáveis das integrações (Google, Meta, e-mail) entram na Fase 6.
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Não | Google Calendar. No Google Cloud: ative a Calendar API e crie um ID do cliente OAuth (aplicativo da Web) com redirecionamento `APP_URL/api/integrations/google/callback` |
+| `META_APP_ID` / `META_APP_SECRET` | Não | Instagram. App em developers.facebook.com com Login do Facebook para Empresas, permissões `instagram_basic`, `instagram_manage_insights`, `pages_show_list`, `pages_read_engagement`, `business_management`; redirecionamento `APP_URL/api/integrations/meta/callback` |
+
+Sem essas variáveis, a tela **Configurações → Integrações** mostra o que falta configurar; o resto do app funciona normalmente.
 
 ## Testes
 
@@ -106,6 +109,28 @@ O GitHub Actions roda tudo isso a cada push em `main`, com um Postgres próprio,
 - **Conteúdo** (`/conteudo`): fluxo de produção em Kanban (etapas editáveis), calendário editorial do mês (arraste para reagendar gravação ou publicação), lista, ficha completa (gancho, roteiro, CTA, datas, link publicado), métricas por post, relatório do período com comparação de formatos e ranking por engajamento, perfis com registros de seguidores/alcance e meta de postagem semanal, e banco de referências que vira ideia com um clique. A data de publicação é marcada quando o conteúdo entra em “Publicado” — nunca sozinha. Engajamento = (curtidas + comentários + compartilhamentos + salvamentos) ÷ alcance (ou visualizações). A coleta automática pela API da Meta entra na Fase 6; até lá os números são registrados manualmente.
 - **Metas** (`/metas`): quantitativas (aumentar ou reduzir; sem valor inicial, “reduzir” funciona como limite) ou qualitativas (por etapas), com horizonte mensal, trimestral, anual ou personalizado, ritmo esperado × realizado e histórico em gráfico. Cálculo automático com dados reais: faturamento, lucro e vendas da Mentoria; resultado, despesas e reservas pessoais; remuneração TURBO recebida; novos leads e conversão; conteúdos publicados; tarefas concluídas; realização dos hábitos.
 - **Integração**: cartões no Dashboard (metas, próximas gravações e publicações, encontros e funil da Mentoria), seções nos resumos diário/semanal/mensal, busca global (leads, mentorados, conteúdos, metas) e criação rápida (lead, conteúdo, meta).
+
+## Módulos da Fase 5 (Desenvolvimento pessoal)
+
+- **MAAS** (`/maas`): autoavaliação de 0 a 10 nas áreas da vida (as 12 áreas padrão são editáveis), roda da vida comparando com a avaliação anterior, evolução da média e de cada área, comentário, meta e plano de ação por área. Uma avaliação por data. O plano de ação vira **objetivo** com etapas em um clique. Áreas sem nota não contam como zero.
+- **Objetivos** (`/objetivos`): objetivos pessoais de longo prazo ligados às áreas do MAAS, com as mesmas regras de progresso das metas.
+- **Revisões** (`/revisoes`): semanal e mensal, com os números do período vindos dos módulos (tarefas, agenda, hábitos, conteúdo, funil, metas) e a reflexão da usuária (o que deu certo, o que ajustar, aprendizados, prioridades e nota).
+- **Relatórios** (`/relatorios`): consolidado do período (mês, mês anterior, trimestre, ano ou personalizado) com finanças pessoais, Mentoria, remuneração TURBO, tarefas e horas, agenda, hábitos, CRM, mentorados, conteúdo, metas e MAAS. Exporta CSV e imprime/gera PDF pelo navegador.
+
+## Módulos da Fase 6 (Integrações)
+
+- **Importar extrato** (Finanças → Contas): OFX (1.x e 2.x) e CSV (detecção de colunas, débito/crédito separados, datas e valores brasileiros, arquivos em Windows-1252). Prévia antes de gravar; linhas já importadas são reconhecidas; previstos compatíveis são **conciliados** (viram pagos, sem duplicar a despesa); possíveis duplicados de lançamentos manuais vêm desmarcados; categoria por linha; desfazer importação.
+- **Google Calendar** (Configurações → Integrações): conecta uma ou mais contas, escolhe quais calendários sincronizar e em qual ambiente cada um entra. Traz eventos (60 dias para trás, 12 meses para frente) e envia ao Google o que é criado, alterado ou excluído no app nos ambientes ligados. Falhas ficam pendentes e são reenviadas. Sincroniza ao abrir a agenda e no agendador diário.
+- **Instagram (Meta)**: para contas profissionais ligadas a uma Página do Facebook. Registra seguidores, publicações, alcance e interações do perfil e as métricas das publicações recentes; publicações que não estão no app são importadas como conteúdo publicado. A conexão expira em ~60 dias (reconectar pela mesma tela).
+- **Open Finance**: não implementado — exige ser instituição autorizada pelo Banco Central ou contratar um agregador pago (Pluggy, Belvo etc.). A importação de extrato cobre o uso sem intermediários.
+
+> **Sobre os testes das integrações:** a importação OFX/CSV é testada de ponta a ponta. Para Google e Meta, os testes automáticos verificam toda a lógica do app (mapeamento, renovação de token, envio, pendências, conciliação de publicações) com respostas simuladas no formato da documentação das APIs. A primeira conexão com uma conta real só pode ser feita depois de configurar as credenciais acima.
+
+## Fase 7 (Validação)
+
+- **Equipe** (Configurações → Equipe): convite por link de uso único (7 dias) com papel (administradora, editora, leitora) e módulos liberados. Financeiro e mentorados só com marcação explícita. Remoção encerra o acesso na hora.
+- Revisão de permissões: dados de outro módulo dentro de uma tela (vendas na ficha do mentorado, valores no lead, tarefas) são filtrados no servidor conforme a permissão. Testes de isolamento entre usuárias e colaboradoras cobrem conteúdo, metas, MAAS, revisões, extratos e busca.
+- Testes E2E percorrem todas as páginas sem erros de execução.
 
 ## Manutenção
 
