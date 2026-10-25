@@ -7,10 +7,10 @@ test.describe.configure({ mode: "serial" });
 test("convite: colaboradora entra só com os módulos liberados", async ({ page, browser }) => {
   await login(page);
   await page.goto("/configuracoes/equipe");
-  await page.getByLabel("Ambiente").selectOption({ label: "Trabalho Mentoria" });
+  await page.getByLabel("Ambiente da equipe").selectOption({ label: "Trabalho Mentoria" });
   await expect(page).toHaveURL(/ws=/);
   await page.waitForLoadState("networkidle");
-  await expect(page.getByLabel("Ambiente")).toHaveValue(/.+/);
+  await expect(page.getByLabel("Ambiente da equipe")).toHaveValue(/.+/);
   const email = `assistente${Date.now().toString(36)}@exemplo.com`;
   await page.getByLabel("E-mail", { exact: true }).fill(email);
   // Só CRM: desmarca tarefas e agenda, marca CRM

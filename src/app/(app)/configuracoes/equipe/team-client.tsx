@@ -44,7 +44,7 @@ export function TeamClient({ workspaces, workspaceId, currentUserId, members, in
     <div className="grid gap-5">
       <PageHeader title="Equipe" description="Convide colaboradores e escolha o que cada pessoa pode ver. Financeiro e mentorados só ficam visíveis se você marcar." />
       {workspaces.length > 1 && (
-        <Select aria-label="Ambiente" value={workspaceId} onChange={(e) => router.replace(`${pathname}?ws=${e.target.value}`)} className="w-64">
+        <Select aria-label="Ambiente da equipe" value={workspaceId} onChange={(e) => router.replace(`${pathname}?ws=${e.target.value}`)} className="w-64">
           {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
         </Select>
       )}
