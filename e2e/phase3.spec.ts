@@ -11,7 +11,6 @@ test.beforeEach(async ({ page }) => {
   await login(page);
 });
 
-const brl = (s: string) => s.replace(/ /g, " ");
 
 test("pessoal: conta, despesa paga e saldo", async ({ page }) => {
   await page.goto("/financas/pessoal?aba=contas");

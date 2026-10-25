@@ -9,8 +9,8 @@ Aplicativo web de gestão pessoal, profissional, financeira e estratégica, com 
 |------|----------|--------|
 | 1 — Fundação | Arquitetura, banco completo, autenticação, sessões, design system, navegação, ambientes, configurações, exportação | ✅ Implementada e testada no CI |
 | 2 — Organização | Dashboard com indicadores reais, agenda com conflitos, tarefas/Kanban, anotações, hábitos, notificações, busca global, anexos | ✅ Implementada e testada no CI |
-| 3 — Financeiro | Contas, receitas, despesas, cartões, parcelamentos, remuneração TURBO, financeiro Mentoria, consolidado | ⏳ Próxima |
-| 4 — Gestão profissional | CRM, leads, mentorados, vendas, conteúdo, calendário editorial, metas | ⏳ |
+| 3 — Financeiro | Contas, receitas, despesas, cartões, parcelamentos, remuneração TURBO, financeiro Mentoria, Empresa e Resultados | ✅ Implementada e testada no CI |
+| 4 — Gestão profissional | CRM, leads, mentorados, conteúdo, calendário editorial, metas | ⏳ Próxima |
 | 5 — Desenvolvimento pessoal | MAAS, objetivos, relatórios, revisões | ⏳ |
 | 6 — Integrações | Google Calendar, Instagram (Meta), Open Finance, importação OFX/CSV | ⏳ |
 | 7 — Validação | Revisão de segurança, UX, financeira, documentação final | ⏳ |
@@ -87,6 +87,17 @@ O GitHub Actions roda tudo isso a cada push em `main`, com um Postgres próprio,
 - **Hábitos** (`/habitos`): frequência diária, dias específicos ou X vezes por semana; marcação dos últimos 7 dias, calendário do período, percentual e sequência. Dia não marcado reduz o percentual, mas não vira pendência.
 - **Notificações** (`/notificacoes`): resumo diário, revisão semanal e mensal (somente com dados registrados) e lembretes de compromissos; preferências de horário e dia.
 - **Dashboard**: hoje, semana, mês ou período personalizado; cartões reordenáveis e ocultáveis; criação rápida; busca global com Ctrl+K.
+
+## Módulos da Fase 3 (Financeiro)
+
+- **Finanças pessoais** (`/financas/pessoal`) e **Financeiro da Mentoria** (`/financas/mentoria`): visão geral, lançamentos, contas, cartões e categorias; a Mentoria tem também vendas.
+- **Lançamentos**: receitas e despesas avulsas, fixas, variáveis, recorrentes (repetir N meses) e parceladas (total dividido exatamente). Editar/excluir "só este" ou "este e os próximos". Previsto × pago/recebido sempre separados. Exportação CSV.
+- **Contas**: saldo = saldo inicial + realizados ± transferências. Reservas = poupança e investimentos.
+- **Cartões**: limite usado/disponível; cada parcela cai na fatura certa conforme fechamento e vencimento; pagamento (total ou parcial) é transferência, nunca despesa; estornos.
+- **Remuneração TURBO** (`/turbo/remuneracao`): salário e bonificações por mês, regras de bonificação por faixas com atingimento, geração de salários previstos, simulador. Ao confirmar o recebimento, uma única receita é lançada no Pessoal.
+- **Vendas da Mentoria**: à vista ou parcelada, recebíveis, inadimplência, comissão (despesa prevista), reembolso e cancelamento. Faturamento na data da venda; recebimento quando o dinheiro entra.
+- **Empresa e Resultados** (`/resultados`): cada ambiente separado, comparativo com o mês anterior, histórico anual e patrimônio total. Retirada da Mentoria = transferência rastreável (receita pessoal, saída de caixa da Mentoria, sem reduzir o lucro).
+- **Dashboard e notificações**: resumo financeiro do mês e avisos de contas a vencer (antecedência configurável).
 
 ## Manutenção
 
