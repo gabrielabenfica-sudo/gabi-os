@@ -10,8 +10,8 @@ import { auditFinance, financeAccess } from "./common";
  * - cada linha vira um lançamento REALIZADO (data = competência = caixa);
  * - o `externalId` (FITID ou hash da linha) é único por conta: importar o mesmo
  *   arquivo de novo não duplica nada;
- * - se já existe um lançamento PREVISTO compatível (mesmo tipo e valor, data
- *   próxima), a linha é sugerida para CONCILIAR: o previsto vira pago em vez de
+ * - se já existe um lançamento PREVISTO compatível no ambiente (mesmo tipo e
+ *   valor, data próxima; os desta conta têm preferência), a linha é sugerida para CONCILIAR: o previsto vira pago em vez de
  *   criar outro — evitando contar a mesma despesa duas vezes;
  * - lançamentos já pagos com mesmo valor e data na mesma conta aparecem como
  *   "possível duplicado" e vêm desmarcados.
@@ -85,10 +85,9 @@ async function classify(accountId: string, workspaceId: string, rows: ParsedRow[
         workspaceId,
         deletedAt: null,
         status: "PLANNED",
-        OR: [{ accountId }, { accountId: null }],
-        AND: [{ OR: [{ competenceDate: { gte: from, lte: to } }, { dueDate: { gte: from, lte: to } }] }],
+        OR: [{ competenceDate: { gte: from, lte: to } }, { dueDate: { gte: from, lte: to } }],
       },
-      select: { id: true, type: true, amountCents: true, description: true, competenceDate: true, dueDate: true },
+      select: { id: true, type: true, amountCents: true, description: true, competenceDate: true, dueDate: true, accountId: true },
     }),
     db.financialTransaction.findMany({
       where: { accountId, deletedAt: null, status: "REALIZED", externalId: null, paidAt: { gte: from, lte: to } },
@@ -108,7 +107,8 @@ async function classify(accountId: string, workspaceId: string, rows: ParsedRow[
       .filter((t) => !usedPlanned.has(t.id) && t.type === type && t.amountCents === abs)
       .map((t) => ({ t, d: Math.min(dist(dateToYmd(t.competenceDate), r.date), t.dueDate ? dist(dateToYmd(t.dueDate), r.date) : Infinity) }))
       .filter((x) => x.d <= MATCH_WINDOW_DAYS)
-      .sort((a, b) => a.d - b.d)[0];
+      // Preferência: previsto desta conta (ou sem conta), depois o mais próximo da data
+      .sort((a, b) => Number(!!a.t.accountId && a.t.accountId !== accountId) - Number(!!b.t.accountId && b.t.accountId !== accountId) || a.d - b.d)[0];
     if (p) {
       usedPlanned.add(p.t.id);
       return { ...r, status: "MATCH" as const, match: { id: p.t.id, description: p.t.description, date: dateToYmd(p.t.dueDate ?? p.t.competenceDate), amountCents: p.t.amountCents } };
