@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/ui/misc";
 import { findFinanceWorkspace, monthRange } from "@/server/finance/common";
 import { listAccounts, listTransfers, transferTargets } from "@/server/finance/accounts";
 import { listCategories } from "@/server/finance/categories";
+import { listImports } from "@/server/finance/imports";
 import { listTransactions, type TransactionFilters } from "@/server/finance/transactions";
 import { getInvoice, listCards, listInvoices, listPurchases } from "@/server/finance/cards";
 import { listPrograms, listSales, receivablesOverview } from "@/server/finance/sales";
@@ -99,8 +100,8 @@ export default async function FinancePage({ params, searchParams }: { params: Pr
 
   if (tab === "contas") {
     const { from, to } = monthRange(month);
-    const transfers = await listTransfers(user.id, ws.id, from, to);
-    content = <AccountsTab {...base} transfers={transfers} targets={targets} />;
+    const [transfers, imports] = await Promise.all([listTransfers(user.id, ws.id, from, to), listImports(user.id, ws.id)]);
+    content = <AccountsTab {...base} transfers={transfers} targets={targets} imports={imports} />;
   }
 
   if (tab === "cartoes") {

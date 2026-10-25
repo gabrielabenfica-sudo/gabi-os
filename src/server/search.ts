@@ -57,7 +57,7 @@ export async function searchAll(userId: string, query: string, tz: string): Prom
       orderBy: { updatedAt: "desc" },
       take: 5,
     }),
-    db.goal.findMany({ where: { workspaceId: { in: goalWs }, deletedAt: null, title: contains }, select: { id: true, title: true, workspace: ws }, take: 4 }),
+    db.goal.findMany({ where: { workspaceId: { in: goalWs }, deletedAt: null, title: contains }, select: { id: true, title: true, isObjective: true, workspace: ws }, take: 4 }),
   ]);
   const date = (d: Date, allDay: boolean) =>
     allDay ? d.toISOString().slice(0, 10).split("-").reverse().join("/") : d.toLocaleString("pt-BR", { timeZone: tz, dateStyle: "short", timeStyle: "short" });
@@ -70,6 +70,6 @@ export async function searchAll(userId: string, query: string, tz: string): Prom
     ...leads.map((l) => ({ type: "lead" as const, id: l.id, title: l.name, subtitle: `Lead · ${l.stage.name}`, href: `/mentoria/crm?lead=${l.id}&fechados=1` })),
     ...mentees.map((m) => ({ type: "mentee" as const, id: m.id, title: m.name, subtitle: `Mentorado${m.program ? ` · ${m.program.name}` : ""}`, href: `/mentoria/mentorados/${m.id}` })),
     ...contents.map((c) => ({ type: "content" as const, id: c.id, title: c.title, subtitle: `${c.status.name} · ${c.workspace.name}`, href: `/conteudo?aba=lista&c=${c.id}` })),
-    ...goals.map((g) => ({ type: "goal" as const, id: g.id, title: g.title, subtitle: `Meta · ${g.workspace.name}`, href: `/metas?status=all&meta=${g.id}` })),
+    ...goals.map((g) => ({ type: "goal" as const, id: g.id, title: g.title, subtitle: `${g.isObjective ? "Objetivo" : "Meta"} · ${g.workspace.name}`, href: `/${g.isObjective ? "objetivos" : "metas"}?status=all&meta=${g.id}` })),
   ];
 }

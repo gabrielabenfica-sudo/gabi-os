@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Archive, ArchiveRestore, ArrowLeftRight, Landmark, MoreHorizontal, Pencil, PiggyBank, Plus, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, ArrowLeftRight, FileUp, Landmark, MoreHorizontal, Pencil, PiggyBank, Plus, Trash2, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +9,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { EmptyState } from "@/components/ui/misc";
 import { useConfirm } from "@/components/ui/confirm";
 import { Money } from "@/components/finance/money-input";
-import { archiveAccountAction, deleteAccountAction, deleteTransferAction } from "../actions";
+import { archiveAccountAction, deleteAccountAction, deleteTransferAction, undoImportAction } from "../actions";
+import { ImportDialog } from "./import-dialog";
 import { AccountDialog, TransferDialog } from "./dialogs";
 import { ACCOUNT_TYPE_LABEL, dateYmd, ymdBR, type FinanceBase, type TransferTarget } from "./types";
 
@@ -30,9 +31,11 @@ type TransferRow = {
 
 const KIND_LABEL: Record<string, string> = { INTERNAL: "Transferência", DISTRIBUTION: "Retirada da Mentoria", CARD_PAYMENT: "Pagamento de fatura", INVESTMENT: "Aplicação/resgate" };
 
-export function AccountsTab({ transfers, targets, ...base }: FinanceBase & { transfers: TransferRow[]; targets: TransferTarget[] }) {
+type ImportRow = { id: string; fileName: string; format: string; imported: number; duplicates: number; createdAt: Date | string; account: { name: string } | null };
+
+export function AccountsTab({ transfers, targets, imports = [], ...base }: FinanceBase & { transfers: TransferRow[]; targets: TransferTarget[]; imports?: ImportRow[] }) {
   const confirm = useConfirm();
-  const [dialog, setDialog] = React.useState<{ kind: "account"; edit?: FinanceBase["accounts"][number] } | { kind: "transfer"; from?: string } | null>(null);
+  const [dialog, setDialog] = React.useState<{ kind: "account"; edit?: FinanceBase["accounts"][number] } | { kind: "transfer"; from?: string } | { kind: "import"; account?: string } | null>(null);
   const active = base.accounts.filter((a) => !a.archived);
   const archived = base.accounts.filter((a) => a.archived);
   const total = active.reduce((s, a) => s + a.balanceCents, 0);
@@ -56,6 +59,7 @@ export function AccountsTab({ transfers, targets, ...base }: FinanceBase & { tra
           <Money cents={reserves} className="text-lg font-semibold" />
         </div>
         <div className="ml-auto flex gap-2">
+          <Button variant="outline" onClick={() => setDialog({ kind: "import" })} disabled={!active.length}><FileUp /> Importar extrato</Button>
           <Button variant="outline" onClick={() => setDialog({ kind: "transfer" })} disabled={!active.length}><ArrowLeftRight /> Transferir</Button>
           <Button onClick={() => setDialog({ kind: "account" })}><Plus /> Nova conta</Button>
         </div>
@@ -83,6 +87,7 @@ export function AccountsTab({ transfers, targets, ...base }: FinanceBase & { tra
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onSelect={() => setDialog({ kind: "account", edit: a })}><Pencil /> Editar</DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => setDialog({ kind: "transfer", from: a.id })}><ArrowLeftRight /> Transferir daqui</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setDialog({ kind: "import", account: a.id })}><FileUp /> Importar extrato</DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => act(() => archiveAccountAction(a.id, true))}><Archive /> Arquivar</DropdownMenuItem>
                     <DropdownMenuItem
                       className="text-danger"
@@ -142,6 +147,33 @@ export function AccountsTab({ transfers, targets, ...base }: FinanceBase & { tra
         )}
       </section>
 
+      {imports.length > 0 && (
+        <section className="grid gap-2">
+          <h2 className="text-sm font-semibold">Importações recentes</h2>
+          <ul className="divide-y divide-border rounded-xl border border-border bg-card" data-testid="imports">
+            {imports.map((i) => (
+              <li key={i.id} className="flex items-center gap-3 px-4 py-2.5 text-sm">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium">{i.fileName}</p>
+                  <p className="text-xs text-muted-foreground">{new Date(i.createdAt).toLocaleString("pt-BR")} · {i.account?.name ?? "—"} · {i.format}</p>
+                </div>
+                <span className="text-xs text-muted-foreground">{i.imported} importado(s){i.duplicates ? ` · ${i.duplicates} ignorado(s)` : ""}</span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={async () => {
+                    if (await confirm({ title: "Desfazer importação?", description: "Os lançamentos criados por ela são apagados e os conciliados voltam a previsto.", confirmLabel: "Desfazer", danger: true })) await act(() => undoImportAction(i.id));
+                  }}
+                >
+                  <Undo2 /> Desfazer
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {dialog?.kind === "import" && <ImportDialog base={base} defaultAccountId={dialog.account} onClose={() => setDialog(null)} />}
       {dialog?.kind === "account" && <AccountDialog base={base} edit={dialog.edit} onClose={() => setDialog(null)} />}
       {dialog?.kind === "transfer" && <TransferDialog base={base} targets={targets} defaultFrom={dialog.from} onClose={() => setDialog(null)} />}
     </div>

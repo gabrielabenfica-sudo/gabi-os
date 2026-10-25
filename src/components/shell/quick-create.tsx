@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BadgeDollarSign, CalendarPlus, Clapperboard, FilePlus2, ListPlus, MinusCircle, Plus, PlusCircle, Repeat, Target, UserPlus } from "lucide-react";
+import { BadgeDollarSign, Compass, CalendarPlus, Clapperboard, FilePlus2, ListPlus, MinusCircle, Plus, PlusCircle, Repeat, Target, UserPlus } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -18,6 +18,7 @@ export const QUICK_CREATE = [
   { href: "/mentoria/crm?novo=1", label: "Novo lead", icon: UserPlus },
   { href: "/conteudo?novo=1", label: "Novo conteúdo", icon: Clapperboard },
   { href: "/metas?nova=1", label: "Nova meta", icon: Target },
+  { href: "/maas?nova=1", label: "Nova avaliação MAAS", icon: Compass },
 ];
 
 export function QuickCreateMenu({ compact = false }: { compact?: boolean }) {

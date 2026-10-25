@@ -12,6 +12,8 @@ const nextConfig: NextConfig = {
   // Tipos são checados em um passo próprio do CI (npm run typecheck)
   eslint: { ignoreDuringBuilds: true },
   serverExternalPackages: ["@node-rs/argon2"],
+  // Extratos OFX/CSV de até 2 MB são enviados por Server Action (texto ~ até 3 MB com codificação)
+  experimental: { serverActions: { bodySizeLimit: "3mb" } },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

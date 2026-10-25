@@ -127,7 +127,7 @@ export function AppShell({
 
       <aside
         className={cn(
-          "sticky top-0 flex h-dvh shrink-0 flex-col bg-sidebar text-sidebar-foreground transition-[width] duration-200",
+          "sticky top-0 flex h-dvh shrink-0 flex-col bg-sidebar print:hidden text-sidebar-foreground transition-[width] duration-200",
           collapsed ? "w-16" : "w-60",
         )}
         aria-label="Menu principal"
@@ -194,7 +194,7 @@ export function AppShell({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-background/85 px-6 backdrop-blur">
+        <header className="sticky top-0 z-30 flex h-14 print:hidden items-center gap-3 border-b border-border bg-background/85 px-6 backdrop-blur">
           <button
             type="button"
             onClick={() => setPaletteOpen(true)}

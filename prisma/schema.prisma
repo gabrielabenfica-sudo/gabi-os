@@ -52,6 +52,7 @@ model User {
   maasAreas         MaasArea[]
   maasAssessments   MaasAssessment[]
   importBatches     ImportBatch[]
+  reviews           Review[]
 }
 
 model Session {
@@ -1375,6 +1376,27 @@ model MaasScore {
   goal         String?
 
   @@unique([assessmentId, areaName])
+}
+
+// Revisão semanal/mensal escrita pela usuária (os números vêm dos módulos)
+model Review {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // WEEKLY | MONTHLY
+  kind         String
+  periodStart  DateTime @db.Date
+  periodEnd    DateTime @db.Date
+  wins         String?
+  improvements String?
+  lessons      String?
+  priorities   String?
+  // 1–5: como foi o período
+  rating       Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, kind, periodStart])
 }
 
 // ═══════════════════════════════════════════════════════════════

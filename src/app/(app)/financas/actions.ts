@@ -9,6 +9,7 @@ import * as tx from "@/server/finance/transactions";
 import * as cards from "@/server/finance/cards";
 import * as sales from "@/server/finance/sales";
 import * as comp from "@/server/finance/compensation";
+import * as imports from "@/server/finance/imports";
 
 const refresh = () => revalidatePath("/", "layout");
 
@@ -90,3 +91,12 @@ export const generateSalariesAction = async (input: { workspaceId: string; amoun
 export const createBonusRuleAction = async (input: comp.BonusRuleInput) => act((u) => comp.createBonusRule(u, input).then(() => null), "Regra criada e bonificação prevista atualizada.");
 export const updateBonusRuleAction = async (id: string, input: Omit<comp.BonusRuleInput, "workspaceId">) => act((u) => comp.updateBonusRule(u, id, input).then(() => null), "Regra salva.");
 export const deleteBonusRuleAction = async (id: string) => act((u) => comp.deleteBonusRule(u, id), "Regra excluída.");
+
+// ─── Importação de extratos (OFX/CSV) ──────────────────────────
+export async function previewImportAction(input: imports.ImportFileInput) {
+  const u = await requireUser();
+  return run(() => imports.previewImport(u.id, input));
+}
+export const confirmImportAction = async (input: imports.ConfirmImportInput) =>
+  act((u) => imports.confirmImport(u, input), "Extrato importado.");
+export const undoImportAction = async (batchId: string) => act((u) => imports.undoImport(u, batchId), "Importação desfeita.");
