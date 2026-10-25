@@ -7,6 +7,12 @@ import { listOccurrences } from "@/server/calendar";
 import { listHabits } from "@/server/habits";
 import { findFinanceWorkspace } from "@/server/finance/common";
 import { payables, type DueItem } from "@/server/finance/summary";
+import { findModuleWorkspace } from "@/server/workspaces";
+import { upcomingContent } from "@/server/content";
+import { upcomingSessions } from "@/server/mentees";
+import { crmMetrics } from "@/server/crm";
+import { listGoals } from "@/server/goals";
+import { formatGoalValue, SITUATION_LABEL } from "@/lib/goals";
 import {
   addDaysYmd, dateToYmd, endOfMonthYmd, formatYmdBR, startOfMonthYmd, startOfWeekYmd,
   todayYmd, ymdInTz, ymdToDate, zonedToUtc,
@@ -92,6 +98,39 @@ async function billsDue(userId: string, tz: string, days: number): Promise<(DueI
   return out.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
 }
 
+/** Seções de gestão do dia: conteúdo, encontros e follow-ups do CRM (só módulos com acesso). */
+async function managementToday(userId: string, day: string, start: Date, end: Date, tz: string): Promise<DigestSection[]> {
+  const out: DigestSection[] = [];
+  const content = await upcomingContent(userId, "all", start, new Date(end.getTime() - 1));
+  if ((await accessibleWorkspaceIds(userId, "content")).length) {
+    out.push({
+      title: "Gravações e publicações de hoje",
+      empty: "Nenhuma gravação ou publicação programada.",
+      items: content.map((c) => ({ label: c.title, detail: `${c.kind === "RECORDING" ? "Gravação" : "Publicação"} · ${timeLabel(c.at, tz)}`, link: `/conteudo?aba=lista&c=${c.id}` })),
+    });
+  }
+  const mentoria = await findModuleWorkspace(userId, "MENTORIA", "mentees");
+  if (mentoria) {
+    const sessions = await upcomingSessions(userId, [mentoria.id], start, new Date(end.getTime() - 1));
+    out.push({ title: "Encontros de mentoria", empty: "Nenhum encontro hoje.", items: sessions.map((s) => ({ label: s.mentee.name, detail: timeLabel(s.date, tz), link: `/mentoria/mentorados/${s.mentee.id}` })) });
+  }
+  const crm = await findModuleWorkspace(userId, "MENTORIA", "crm");
+  if (crm) {
+    const leads = await db.lead.findMany({
+      where: { workspaceId: crm.id, deletedAt: null, stage: { isWon: false, isLost: false }, nextActionDate: { lte: new Date(`${day}T23:59:59Z`) } },
+      select: { id: true, name: true, nextAction: true, nextActionDate: true },
+      orderBy: { nextActionDate: "asc" },
+      take: 15,
+    });
+    out.push({
+      title: "Follow-ups do CRM",
+      empty: "Nenhuma ação de lead para hoje.",
+      items: leads.map((l) => ({ label: l.name, detail: `${l.nextAction ?? "Próxima ação"} · ${dateToYmd(l.nextActionDate!) < day ? "atrasada" : "hoje"}`, link: `/mentoria/crm?lead=${l.id}` })),
+    });
+  }
+  return out;
+}
+
 export async function buildDailyDigest(userId: string, day: string, tz: string): Promise<DigestData> {
   const ids = await accessibleWorkspaceIds(userId, "tasks");
   const { start, end } = rangeUtc(day, day, tz);
@@ -111,6 +150,7 @@ export async function buildDailyDigest(userId: string, day: string, tz: string):
   const prefs = await getPrefs(userId);
   const bills = await billsDue(userId, tz, prefs.billDueDaysBefore);
   const active = events.filter((e) => e.status !== "CANCELLED");
+  const gestao = await managementToday(userId, day, start, end, tz);
   return {
     kind: "DAILY",
     period: { from: day, to: day },
@@ -137,6 +177,7 @@ export async function buildDailyDigest(userId: string, day: string, tz: string):
           link: b.href,
         })),
       },
+      ...gestao,
       {
         title: "Hábitos de hoje",
         empty: "Nenhum hábito ativo.",
@@ -170,6 +211,7 @@ async function periodReview(userId: string, kind: "WEEKLY" | "MONTHLY", from: st
   ]);
   const done = events.filter((e) => e.status === "DONE").length;
   const held = events.filter((e) => e.status !== "CANCELLED").length;
+  const gestao = await managementReview(userId, from, to, start, end, tz);
   const rated = habits.filter((h) => h.stats.rate !== null);
   const habitAvg = rated.length ? Math.round(rated.reduce((s, h) => s + h.stats.rate!, 0) / rated.length) : null;
   return {
@@ -193,6 +235,7 @@ async function periodReview(userId: string, kind: "WEEKLY" | "MONTHLY", from: st
         empty: "Nenhum hábito com registro no período.",
         items: rated.map((h) => ({ label: h.name, detail: `${h.stats.rate}% (${h.stats.done}/${h.stats.expected})`, link: "/habitos" })),
       },
+      ...gestao,
       {
         title: kind === "WEEKLY" ? "Prioridades da próxima semana" : "Prioridades do próximo mês",
         empty: "Nada agendado ainda.",
@@ -203,6 +246,44 @@ async function periodReview(userId: string, kind: "WEEKLY" | "MONTHLY", from: st
       },
     ],
   };
+}
+
+/** Revisão de gestão: conteúdo publicado, funil e metas (somente com dados registrados). */
+async function managementReview(userId: string, from: string, to: string, start: Date, end: Date, tz: string): Promise<DigestSection[]> {
+  const out: DigestSection[] = [];
+  const contentWs = await accessibleWorkspaceIds(userId, "content");
+  if (contentWs.length) {
+    const published = await db.contentItem.findMany({
+      where: { workspaceId: { in: contentWs }, deletedAt: null, status: { isPublished: true }, publishedAt: { gte: start, lt: end } },
+      select: { id: true, title: true },
+      take: 30,
+    });
+    out.push({ title: "Conteúdos publicados", empty: "Nenhum conteúdo publicado no período.", items: published.map((c) => ({ label: c.title, link: `/conteudo?aba=lista&c=${c.id}` })) });
+  }
+  const crm = await findModuleWorkspace(userId, "MENTORIA", "crm");
+  if (crm) {
+    const m = await crmMetrics(userId, crm.id, { from, to }, tz);
+    out.push({
+      title: "Funil de vendas",
+      empty: "Nenhum lead novo ou fechado no período.",
+      items: m.newLeads || m.won || m.lost
+        ? [{ label: `${m.newLeads} lead(s) novo(s) · ${m.won} venda(s) · ${m.lost} perdido(s)`, detail: m.conversionRate !== null ? `Conversão ${m.conversionRate.toLocaleString("pt-BR")}%` : undefined, link: "/mentoria/crm" }]
+        : [],
+    });
+  }
+  if ((await accessibleWorkspaceIds(userId, "goals")).length) {
+    const goals = await listGoals(userId, { status: "ACTIVE" }, tz);
+    out.push({
+      title: "Metas",
+      empty: "Nenhuma meta ativa.",
+      items: goals.map((g) => ({
+        label: g.title,
+        detail: `${SITUATION_LABEL[g.situation]} · ${g.measure === "QUALITATIVE" ? `${g.progress}% das etapas` : `${formatGoalValue(g.currentValue, g.unit)} de ${formatGoalValue(g.targetValue, g.unit)}`}`,
+        link: `/metas?meta=${g.id}`,
+      })),
+    });
+  }
+  return out;
 }
 
 export const buildWeeklyReview = (userId: string, weekStart: string, tz: string) =>

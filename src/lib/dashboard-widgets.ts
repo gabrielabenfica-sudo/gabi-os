@@ -7,6 +7,9 @@ export const WIDGETS = [
   { id: "overdue", label: "Tarefas atrasadas" },
   { id: "habits", label: "Hábitos" },
   { id: "finance", label: "Resumo financeiro" },
+  { id: "goals", label: "Metas" },
+  { id: "content", label: "Próximas gravações e publicações" },
+  { id: "mentoria", label: "Mentoria: encontros e funil" },
   { id: "completion-chart", label: "Tarefas concluídas por dia" },
 ] as const;
 export type WidgetId = (typeof WIDGETS)[number]["id"];

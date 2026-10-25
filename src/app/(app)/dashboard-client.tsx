@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { AlertTriangle, ArrowDown, ArrowRight, ArrowUp, CalendarClock, Check, Clock, LayoutGrid, MapPin, Repeat } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowRight, ArrowUp, CalendarClock, Check, Clock, Film, LayoutGrid, MapPin, Repeat, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +14,8 @@ import { Checkbox, Segmented, WsDot } from "@/components/ui/misc";
 import { PriorityBadge } from "@/components/priority";
 import { cn } from "@/lib/utils";
 import type { DashboardData } from "@/server/dashboard";
+import { formatGoalValue, SITUATION_LABEL } from "@/lib/goals";
+import { formatLabel } from "@/lib/content";
 import { WIDGETS, type DashboardPeriod, type DashboardPrefs, type WidgetId } from "@/lib/dashboard-widgets";
 import { completeTaskFromDashboardAction, saveDashboardPrefsAction, toggleHabitTodayAction } from "./dashboard-actions";
 import { QuickCreateMenu } from "@/components/shell/quick-create";
@@ -86,6 +88,9 @@ export function DashboardClient({
     overdue: <TaskListCard title="Tarefas atrasadas" empty="Nada atrasado. 👏" tasks={data.overdue} today={data.today} tone="danger" />,
     habits: <HabitsCard data={data} />,
     finance: <FinanceCard data={data} />,
+    goals: <GoalsCard data={data} />,
+    content: <ContentCard data={data} tz={tz} />,
+    mentoria: <MentoriaCard data={data} tz={tz} />,
     "completion-chart": (
       <Card className="lg:col-span-2">
         <CardHeader><CardTitle>Tarefas concluídas por dia</CardTitle></CardHeader>
@@ -368,6 +373,112 @@ function FinanceCard({ data }: { data: DashboardData }) {
                 </ul>
               </div>
             )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+const fmtDateTime = (d: Date | string, tz: string) => new Date(d).toLocaleString("pt-BR", { timeZone: tz, weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+
+function GoalsCard({ data }: { data: DashboardData }) {
+  return (
+    <Card>
+      <CardHeader className="flex-row items-center justify-between">
+        <CardTitle>Metas</CardTitle>
+        <Link href="/metas" className="text-xs text-primary hover:underline">{data.goalsCount > data.goals.length ? `Ver todas (${data.goalsCount})` : "Metas"}</Link>
+      </CardHeader>
+      <CardContent>
+        {data.goals.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhuma meta ativa. <Link href="/metas?nova=1" className="text-primary hover:underline">Criar meta</Link></p>
+        ) : (
+          <ul className="grid gap-3">
+            {data.goals.map((g) => {
+              const limit = g.usedPct !== null;
+              const width = limit ? Math.min(100, g.usedPct!) : g.progress;
+              const bad = g.situation === "BEHIND" || g.situation === "OVER_LIMIT" || g.situation === "ENDED_MISSED";
+              return (
+                <li key={g.id} className="grid gap-1">
+                  <div className="flex items-baseline justify-between gap-2 text-sm">
+                    <Link href={`/metas?meta=${g.id}`} className="truncate hover:underline">{g.title}</Link>
+                    <span className={cn("shrink-0 text-xs", bad ? "text-warning" : "text-muted-foreground")}>{SITUATION_LABEL[g.situation]}</span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-muted" aria-hidden><div className={cn("h-1.5 rounded-full", g.situation === "ACHIEVED" ? "bg-success" : bad ? "bg-warning" : "bg-[var(--chart-in)]")} style={{ width: `${width}%` }} /></div>
+                  <p className="text-xs text-muted-foreground tabular">
+                    {g.measure === "QUALITATIVE" ? `${g.progress}% das etapas` : `${formatGoalValue(g.currentValue, g.unit)} de ${formatGoalValue(g.targetValue, g.unit)}`}
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ContentCard({ data, tz }: { data: DashboardData; tz: string }) {
+  return (
+    <Card>
+      <CardHeader className="flex-row items-center justify-between">
+        <CardTitle>Próximas gravações e publicações</CardTitle>
+        <Link href="/conteudo?aba=calendario" className="text-xs text-primary hover:underline">Calendário</Link>
+      </CardHeader>
+      <CardContent>
+        {data.contentNext.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nada programado para os próximos 14 dias.</p>
+        ) : (
+          <ul className="grid gap-2">
+            {data.contentNext.slice(0, 8).map((c) => (
+              <li key={`${c.id}-${c.kind}`} className="flex items-center gap-2 text-sm">
+                {c.kind === "RECORDING" ? <Film className="size-4 shrink-0 text-info" aria-label="Gravação" /> : <Send className="size-4 shrink-0 text-brand" aria-label="Publicação" />}
+                <span className="w-28 shrink-0 text-xs capitalize text-muted-foreground">{fmtDateTime(c.at, tz)}</span>
+                <Link href={`/conteudo?aba=lista&c=${c.id}`} className="flex-1 truncate hover:underline">{c.title}</Link>
+                {c.format && <span className="text-xs text-muted-foreground">{formatLabel(c.format)}</span>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function MentoriaCard({ data, tz }: { data: DashboardData; tz: string }) {
+  const m = data.mentoria;
+  return (
+    <Card>
+      <CardHeader className="flex-row items-center justify-between">
+        <CardTitle>Mentoria</CardTitle>
+        <Link href="/mentoria/mentorados" className="text-xs text-primary hover:underline">Mentorados</Link>
+      </CardHeader>
+      <CardContent>
+        {!m ? (
+          <p className="text-sm text-muted-foreground">Selecione “Todos” ou o ambiente Mentoria para ver encontros e funil.</p>
+        ) : (
+          <div className="grid gap-3">
+            {m.crm && (
+              <div className="flex flex-wrap gap-4 text-sm">
+                <Link href="/mentoria/crm" className="hover:underline"><span className="font-semibold tabular">{m.openLeads}</span> lead(s) em negociação</Link>
+                {m.overdueLeads > 0 && <Link href="/mentoria/crm" className="text-danger hover:underline"><span className="font-semibold tabular">{m.overdueLeads}</span> ação(ões) atrasada(s)</Link>}
+              </div>
+            )}
+            <div className="grid gap-1">
+              <p className="text-xs font-medium">Encontros nos próximos 7 dias</p>
+              {m.sessions.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhum encontro agendado.</p>
+              ) : (
+                <ul className="grid gap-1.5">
+                  {m.sessions.map((s) => (
+                    <li key={s.id} className="flex items-center gap-2 text-sm">
+                      <span className="w-28 shrink-0 text-xs capitalize text-muted-foreground">{fmtDateTime(s.date, tz)}</span>
+                      <Link href={`/mentoria/mentorados/${s.mentee.id}`} className="truncate hover:underline">{s.mentee.name}</Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
         )}
       </CardContent>

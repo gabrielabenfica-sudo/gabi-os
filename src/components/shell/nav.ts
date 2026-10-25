@@ -1,6 +1,10 @@
 import {
   BarChart3,
   Bell,
+  Clapperboard,
+  Filter,
+  Target,
+  Users,
   Briefcase,
   GraduationCap,
   Wallet,
@@ -48,6 +52,15 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/turbo/remuneracao", label: "Remuneração TURBO", icon: Briefcase, keywords: ["salário", "bonificação", "bônus", "meta"] },
       { href: "/financas/mentoria", label: "Financeiro Mentoria", icon: GraduationCap, keywords: ["vendas", "faturamento", "lucro", "recebíveis", "inadimplência"] },
       { href: "/resultados", label: "Empresa e Resultados", icon: BarChart3, keywords: ["consolidado", "patrimônio", "comparativo"], shortcut: "G R" },
+    ],
+  },
+  {
+    title: "Gestão",
+    items: [
+      { href: "/mentoria/crm", label: "CRM", icon: Filter, keywords: ["leads", "funil", "vendas", "pipeline", "clientes"], shortcut: "G L" },
+      { href: "/mentoria/mentorados", label: "Mentorados", icon: Users, keywords: ["alunos", "clientes", "encontros", "mentoria"], shortcut: "G M" },
+      { href: "/conteudo", label: "Conteúdo", icon: Clapperboard, keywords: ["instagram", "reels", "calendário editorial", "posts", "roteiro"], shortcut: "G I" },
+      { href: "/metas", label: "Metas", icon: Target, keywords: ["objetivos", "resultados", "progresso", "okr"], shortcut: "G O" },
     ],
   },
   {

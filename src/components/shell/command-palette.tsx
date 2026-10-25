@@ -4,11 +4,11 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Command } from "cmdk";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { CalendarDays, FileText, FolderKanban, ListChecks, Repeat, Search } from "lucide-react";
+import { CalendarDays, Clapperboard, FileText, Filter, FolderKanban, GraduationCap, ListChecks, Repeat, Search, Target } from "lucide-react";
 import { NAV_SECTIONS } from "./nav";
 import { QUICK_CREATE } from "./quick-create";
 
-type Result = { type: "task" | "event" | "note" | "habit" | "project"; id: string; title: string; subtitle?: string; href: string };
+type Result = { type: "task" | "event" | "note" | "habit" | "project" | "lead" | "mentee" | "content" | "goal"; id: string; title: string; subtitle?: string; href: string };
 
 const TYPE_META: Record<Result["type"], { label: string; icon: React.ComponentType<{ className?: string }> }> = {
   task: { label: "Tarefas", icon: ListChecks },
@@ -16,6 +16,10 @@ const TYPE_META: Record<Result["type"], { label: string; icon: React.ComponentTy
   note: { label: "Anotações", icon: FileText },
   habit: { label: "Hábitos", icon: Repeat },
   project: { label: "Projetos", icon: FolderKanban },
+  lead: { label: "Leads", icon: Filter },
+  mentee: { label: "Mentorados", icon: GraduationCap },
+  content: { label: "Conteúdos", icon: Clapperboard },
+  goal: { label: "Metas", icon: Target },
 };
 
 const groupClass =

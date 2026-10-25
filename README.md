@@ -10,8 +10,8 @@ Aplicativo web de gestão pessoal, profissional, financeira e estratégica, com 
 | 1 — Fundação | Arquitetura, banco completo, autenticação, sessões, design system, navegação, ambientes, configurações, exportação | ✅ Implementada e testada no CI |
 | 2 — Organização | Dashboard com indicadores reais, agenda com conflitos, tarefas/Kanban, anotações, hábitos, notificações, busca global, anexos | ✅ Implementada e testada no CI |
 | 3 — Financeiro | Contas, receitas, despesas, cartões, parcelamentos, remuneração TURBO, financeiro Mentoria, Empresa e Resultados | ✅ Implementada e testada no CI |
-| 4 — Gestão profissional | CRM, leads, mentorados, conteúdo, calendário editorial, metas | ⏳ Próxima |
-| 5 — Desenvolvimento pessoal | MAAS, objetivos, relatórios, revisões | ⏳ |
+| 4 — Gestão profissional | CRM, leads, mentorados, conteúdo, calendário editorial, perfis, metas | ✅ Implementada e testada no CI |
+| 5 — Desenvolvimento pessoal | MAAS, objetivos, relatórios, revisões | ⏳ Próxima |
 | 6 — Integrações | Google Calendar, Instagram (Meta), Open Finance, importação OFX/CSV | ⏳ |
 | 7 — Validação | Revisão de segurança, UX, financeira, documentação final | ⏳ |
 
@@ -98,6 +98,14 @@ O GitHub Actions roda tudo isso a cada push em `main`, com um Postgres próprio,
 - **Vendas da Mentoria**: à vista ou parcelada, recebíveis, inadimplência, comissão (despesa prevista), reembolso e cancelamento. Faturamento na data da venda; recebimento quando o dinheiro entra.
 - **Empresa e Resultados** (`/resultados`): cada ambiente separado, comparativo com o mês anterior, histórico anual e patrimônio total. Retirada da Mentoria = transferência rastreável (receita pessoal, saída de caixa da Mentoria, sem reduzir o lucro).
 - **Dashboard e notificações**: resumo financeiro do mês e avisos de contas a vencer (antecedência configurável).
+
+## Módulos da Fase 4 (Gestão profissional)
+
+- **CRM** (`/mentoria/crm`): funil em Kanban com etapas personalizáveis, valor potencial por etapa, próxima ação (atrasadas em destaque), histórico de contatos (ligação, mensagem, reunião, anotação) e mudanças de etapa registradas automaticamente. Indicadores do período: novos leads, vendas, conversão (ganhos ÷ ganhos + perdidos), valor em negociação, ciclo médio e origem dos leads. **Registrar venda** cria a venda no financeiro (mesmas regras da Fase 3), move o lead para “Venda realizada” e, se marcado, cadastra o mentorado — sem duplicar.
+- **Mentorados** (`/mentoria/mentorados`): ficha com contato, produto, contrato e recebimentos; encontros (com opção de criar o compromisso na agenda, verificando conflitos com todos os ambientes), resumo e próximos passos; metas individuais com progresso; tarefas vinculadas; materiais e arquivos; anotações vinculadas; vendas e parcelas; linha do tempo automática (início, encontros realizados, metas atingidas, mudanças de status) e manual.
+- **Conteúdo** (`/conteudo`): fluxo de produção em Kanban (etapas editáveis), calendário editorial do mês (arraste para reagendar gravação ou publicação), lista, ficha completa (gancho, roteiro, CTA, datas, link publicado), métricas por post, relatório do período com comparação de formatos e ranking por engajamento, perfis com registros de seguidores/alcance e meta de postagem semanal, e banco de referências que vira ideia com um clique. A data de publicação é marcada quando o conteúdo entra em “Publicado” — nunca sozinha. Engajamento = (curtidas + comentários + compartilhamentos + salvamentos) ÷ alcance (ou visualizações). A coleta automática pela API da Meta entra na Fase 6; até lá os números são registrados manualmente.
+- **Metas** (`/metas`): quantitativas (aumentar ou reduzir; sem valor inicial, “reduzir” funciona como limite) ou qualitativas (por etapas), com horizonte mensal, trimestral, anual ou personalizado, ritmo esperado × realizado e histórico em gráfico. Cálculo automático com dados reais: faturamento, lucro e vendas da Mentoria; resultado, despesas e reservas pessoais; remuneração TURBO recebida; novos leads e conversão; conteúdos publicados; tarefas concluídas; realização dos hábitos.
+- **Integração**: cartões no Dashboard (metas, próximas gravações e publicações, encontros e funil da Mentoria), seções nos resumos diário/semanal/mensal, busca global (leads, mentorados, conteúdos, metas) e criação rápida (lead, conteúdo, meta).
 
 ## Manutenção
 

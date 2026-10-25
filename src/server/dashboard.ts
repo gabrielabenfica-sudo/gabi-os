@@ -7,6 +7,10 @@ import { taskCardInclude, taskStats } from "@/server/tasks";
 import { findFinanceWorkspace } from "@/server/finance/common";
 import { balancesFor } from "@/server/finance/accounts";
 import { payables, personalMonthly } from "@/server/finance/summary";
+import { upcomingContent } from "@/server/content";
+import { listGoals } from "@/server/goals";
+import { upcomingSessions } from "@/server/mentees";
+import { findModuleWorkspace } from "@/server/workspaces";
 import { addDaysYmd, eachDayYmd, endOfMonthYmd, startOfMonthYmd, startOfWeekYmd, todayYmd, ymdInTz, ymdToDate, zonedToUtc } from "@/lib/dates";
 
 import { WIDGETS } from "@/lib/dashboard-widgets";
@@ -107,6 +111,25 @@ export async function getDashboard(userId: string, tz: string, workspaceFilter: 
     finance = { month: monthRow[0]!, balanceCents: [...bal.values()].reduce((a, b) => a + b, 0), dueSoon: due, hasAccounts: accounts.length > 0 };
   }
 
+  // Gestão: próximas gravações/publicações, metas ativas e Mentoria (encontros e funil)
+  const twoWeeks = new Date(now.getTime() + 14 * 86_400_000);
+  const [contentNext, goals, mentoriaWs] = await Promise.all([
+    upcomingContent(userId, workspaceFilter === "all" ? "all" : [workspaceFilter], now, twoWeeks),
+    listGoals(userId, { workspace: workspaceFilter, status: "ACTIVE" }, tz),
+    findModuleWorkspace(userId, "MENTORIA", "mentees"),
+  ]);
+  let mentoria: null | { sessions: Awaited<ReturnType<typeof upcomingSessions>>; overdueLeads: number; openLeads: number; crm: boolean } = null;
+  if (mentoriaWs && (workspaceFilter === "all" || workspaceFilter === mentoriaWs.id)) {
+    const crmWs = await findModuleWorkspace(userId, "MENTORIA", "crm");
+    const leadBase = { workspaceId: mentoriaWs.id, deletedAt: null, stage: { isWon: false, isLost: false } };
+    const [sessions, overdueLeads, openLeads] = await Promise.all([
+      upcomingSessions(userId, [mentoriaWs.id], new Date(now.getTime() - 3600_000), new Date(now.getTime() + 7 * 86_400_000)),
+      crmWs ? db.lead.count({ where: { ...leadBase, nextActionDate: { lt: new Date(`${today}T00:00:00Z`) } } }) : Promise.resolve(0),
+      crmWs ? db.lead.count({ where: leadBase }) : Promise.resolve(0),
+    ]);
+    mentoria = { sessions, overdueLeads, openLeads, crm: !!crmWs };
+  }
+
   const expectedToday = habits.filter((h) => h.expectedToday);
   const rated = habits.filter((h) => h.stats.rate !== null);
 
@@ -129,6 +152,10 @@ export async function getDashboard(userId: string, tz: string, workspaceFilter: 
     overdue,
     completionSeries: days.map((d) => ({ day: d, count: perDay.get(d)! })),
     finance,
+    contentNext,
+    goals: goals.slice(0, 6),
+    goalsCount: goals.length,
+    mentoria,
     habits: {
       expectedToday: expectedToday.length,
       doneToday: expectedToday.filter((h) => h.doneToday).length,

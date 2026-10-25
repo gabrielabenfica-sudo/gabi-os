@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BadgeDollarSign, CalendarPlus, FilePlus2, ListPlus, MinusCircle, Plus, PlusCircle, Repeat } from "lucide-react";
+import { BadgeDollarSign, CalendarPlus, Clapperboard, FilePlus2, ListPlus, MinusCircle, Plus, PlusCircle, Repeat, Target, UserPlus } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -15,6 +15,9 @@ export const QUICK_CREATE = [
   { href: "/financas/pessoal?aba=lancamentos&novo=despesa", label: "Nova despesa", icon: MinusCircle },
   { href: "/financas/pessoal?aba=lancamentos&novo=receita", label: "Nova receita", icon: PlusCircle },
   { href: "/financas/mentoria?aba=vendas&novo=venda", label: "Nova venda", icon: BadgeDollarSign },
+  { href: "/mentoria/crm?novo=1", label: "Novo lead", icon: UserPlus },
+  { href: "/conteudo?novo=1", label: "Novo conteúdo", icon: Clapperboard },
+  { href: "/metas?nova=1", label: "Nova meta", icon: Target },
 ];
 
 export function QuickCreateMenu({ compact = false }: { compact?: boolean }) {
