@@ -256,9 +256,13 @@ model Task {
   timeEntries TimeEntry[]
   history     TaskHistory[]
   events      CalendarEvent[]
+  // Tarefa vinculada a um mentorado (aparece na ficha dele)
+  menteeId    String?
+  mentee      Mentee?    @relation(fields: [menteeId], references: [id], onDelete: SetNull)
 
   @@index([workspaceId, statusId, position])
   @@index([workspaceId, dueDate])
+  @@index([menteeId])
 }
 
 model TaskChecklistItem {
@@ -537,6 +541,8 @@ model Goal {
   category     String?
   // QUANTITATIVE ou QUALITATIVE
   measure      String     @default("QUANTITATIVE")
+  // UP: atingir pelo menos o valor-alvo · DOWN: ficar abaixo do limite (ex.: gastos)
+  direction    String     @default("UP")
   indicator    String?
   unit         String?
   startValue   Decimal?   @db.Decimal(18, 2)
@@ -1048,6 +1054,7 @@ model Mentee {
   updatedAt       DateTime           @updatedAt
 
   lead      Lead?
+  tasks     Task[]
   sessions  MentoringSession[]
   goals     MenteeGoal[]
   materials MenteeMaterial[]
