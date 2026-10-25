@@ -136,12 +136,12 @@ test("Mentoria: venda à vista recebida, retirada para o pessoal e consolidado",
 
   // Consolidado: lucro da Mentoria não é reduzido pela retirada
   await page.goto("/resultados");
-  const body = brl(await page.locator("main").innerText());
-  expect(body).toContain("Mentoria");
-  expect(body).toContain("Lucro");
-  expect(body).toContain("R$ 2.000,00");
-  expect(body).toContain("… das quais retiradas da Mentoria");
-  expect(body).toContain("R$ 500,00");
+  const main = page.locator("main");
+  await expect(main.getByRole("heading", { name: "Empresa e Resultados" })).toBeVisible();
+  await expect(main).toContainText("Lucro");
+  await expect(main).toContainText("R$ 2.000,00");
+  await expect(main).toContainText("… das quais retiradas da Mentoria");
+  await expect(main).toContainText("R$ 500,00");
 
   // Exportação CSV dos lançamentos pessoais
   await page.goto("/financas/pessoal?aba=lancamentos");
