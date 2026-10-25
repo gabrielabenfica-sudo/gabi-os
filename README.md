@@ -74,13 +74,15 @@ npm run build && npm run test:e2e                                 # sobe o app e
 O GitHub Actions roda tudo isso a cada push em `main`, com um Postgres próprio, e também verifica se
 `schema.prisma` e as migrações estão sincronizados.
 
-## Publicação (recomendado: Vercel + Neon)
+## Publicação
 
-1. Crie um banco Postgres gerenciado (Neon ou Supabase; ambos têm plano gratuito) e copie a URL de conexão.
-2. Em vercel.com, importe este repositório.
-3. Em *Settings → Environment Variables*, defina `DATABASE_URL`, `ENCRYPTION_KEY` e `APP_URL`.
-4. Em *Settings → Build*, use o comando de build `npx prisma migrate deploy && npm run build`.
-5. Faça o deploy e crie sua conta no endereço publicado.
+Em produção: **https://gabi-os.onrender.com** (Render, plano gratuito) com banco no **Neon**.
+Cada push em `main` publica sozinho; o build aplica as migrações antes de compilar.
+
+Para publicar em outro lugar: crie um Postgres (Neon, Supabase…), defina `DATABASE_URL`,
+`ENCRYPTION_KEY` e `APP_URL`, e use o build `npx prisma migrate deploy && npm run build` e o
+comando `npm start`. No plano gratuito do Render o app dorme após 15 minutos sem uso (a primeira
+abertura leva cerca de 50 segundos).
 
 ## Módulos da Fase 2
 
