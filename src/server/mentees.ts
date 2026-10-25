@@ -106,7 +106,11 @@ export async function getMentee(userId: string, menteeId: string) {
   });
   if (!mentee) throw new NotFoundError("Mentorado");
   await access(userId, mentee.workspaceId);
-  return mentee;
+  // Vendas e parcelas são dados do financeiro; tarefas exigem o módulo de tarefas
+  const [canFinance, canTasks] = await Promise.all(
+    (["finance", "tasks"] as const).map((module) => requireWorkspaceAccess(userId, mentee.workspaceId, { module }).then(() => true, () => false)),
+  );
+  return { ...mentee, sales: canFinance ? mentee.sales : [], tasks: canTasks ? mentee.tasks : [] };
 }
 
 export type MenteeDetail = Awaited<ReturnType<typeof getMentee>>;

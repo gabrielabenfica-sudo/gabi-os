@@ -125,6 +125,8 @@ export async function findModuleWorkspace(userId: string, kind: WorkspaceKind, m
     include: { workspace: true },
     orderBy: { workspace: { position: "asc" } },
   });
+  // Os ambientes da própria usuária vêm antes dos compartilhados com ela
+  members.sort((a, b) => Number(a.role !== "OWNER") - Number(b.role !== "OWNER"));
   const m = members.find((x) => x.role === "OWNER" || x.role === "ADMIN" || x.modules.includes(module));
   return m?.workspace ?? null;
 }

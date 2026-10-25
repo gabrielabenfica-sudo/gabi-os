@@ -61,7 +61,7 @@ describe("Google Calendar (respostas simuladas)", () => {
     const { user, pessoal, conn, cal } = await googleSetup();
     const soon = new Date(Date.now() + 2 * 86_400_000);
     const iso = (d: Date) => d.toISOString();
-    let remote = [
+    let remote: Record<string, unknown>[] = [
       { id: "g1", status: "confirmed", etag: '"1"', summary: "Dentista", start: { dateTime: iso(soon) }, end: { dateTime: iso(new Date(soon.getTime() + 3600_000)) } },
       { id: "g2", status: "confirmed", summary: "Viagem", start: { date: iso(soon).slice(0, 10) }, end: { date: iso(new Date(soon.getTime() + 2 * 86_400_000)).slice(0, 10) } },
       { id: "g3", status: "cancelled" },

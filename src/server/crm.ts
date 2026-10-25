@@ -138,7 +138,9 @@ export async function getLead(userId: string, leadId: string) {
   });
   if (!lead) throw new NotFoundError("Lead");
   await access(userId, lead.workspaceId);
-  return lead;
+  // Valores de venda são dados do financeiro: só aparecem com essa permissão
+  const canFinance = await requireWorkspaceAccess(userId, lead.workspaceId, { module: "finance" }).then(() => true, () => false);
+  return canFinance ? lead : { ...lead, sales: [] };
 }
 
 async function endPosition(stageId: string) {
