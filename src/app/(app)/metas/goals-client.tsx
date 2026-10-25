@@ -436,7 +436,8 @@ function GoalDetailDialog({ id, today, onClose, onEdit }: { id: string; today: s
             {goal.steps.map((s) => (
               <li key={s.id} className="flex items-center gap-2 text-sm">
                 <Checkbox
-                  checked={s.done}
+                  key={`${s.id}-${s.done}`}
+                  defaultChecked={s.done}
                   aria-label={`Concluir etapa ${s.title}`}
                   onChange={async (e) => {
                     const r = await updateGoalStepAction(s.id, { done: e.target.checked });

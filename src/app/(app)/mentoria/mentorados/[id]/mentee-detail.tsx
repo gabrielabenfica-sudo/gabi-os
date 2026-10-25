@@ -299,7 +299,8 @@ function Goals({ mentee }: { mentee: MenteeDetail }) {
           <li key={g.id} className="grid gap-1.5 rounded-lg border border-border px-3 py-2 text-sm" data-goal={g.title}>
             <div className="flex items-center gap-2">
               <Checkbox
-                checked={g.done}
+                key={`${g.id}-${g.done}`}
+                defaultChecked={g.done}
                 aria-label={`Concluir ${g.title}`}
                 onChange={async (e) => {
                   const r = await updateMenteeGoalAction(g.id, { done: e.target.checked });
@@ -382,7 +383,8 @@ function Tasks({ mentee, today }: { mentee: MenteeDetail; today: string }) {
           return (
             <li key={t.id} className="flex items-center gap-2 rounded-md px-1 py-1 text-sm">
               <Checkbox
-                checked={t.status.isDone}
+                key={`${t.id}-${t.status.isDone}`}
+                defaultChecked={t.status.isDone}
                 aria-label={`Concluir ${t.title}`}
                 onChange={async (e) => {
                   const r = await setTaskDoneAction(t.id, e.target.checked);
