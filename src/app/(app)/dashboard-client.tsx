@@ -85,6 +85,7 @@ export function DashboardClient({
     priorities: <TaskListCard title="Prioridades" empty="Nenhuma prioridade alta ou prazo no período." tasks={data.priorities} today={data.today} />,
     overdue: <TaskListCard title="Tarefas atrasadas" empty="Nada atrasado. 👏" tasks={data.overdue} today={data.today} tone="danger" />,
     habits: <HabitsCard data={data} />,
+    finance: <FinanceCard data={data} />,
     "completion-chart": (
       <Card className="lg:col-span-2">
         <CardHeader><CardTitle>Tarefas concluídas por dia</CardTitle></CardHeader>
@@ -322,6 +323,52 @@ function HabitsCard({ data }: { data: DashboardData }) {
             })}
             {data.habits.items.every((h) => !h.expectedToday) && <li className="text-sm text-muted-foreground">Nenhum hábito previsto para hoje.</li>}
           </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function FinanceCard({ data }: { data: DashboardData }) {
+  const f = data.finance;
+  const brl = (c: number) => (c / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  return (
+    <Card>
+      <CardHeader className="flex-row items-center justify-between">
+        <CardTitle>Resumo financeiro do mês</CardTitle>
+        <Link href="/financas/pessoal" className="text-xs text-primary hover:underline">Finanças</Link>
+      </CardHeader>
+      <CardContent>
+        {!f ? (
+          <p className="text-sm text-muted-foreground">Selecione “Todos” ou o ambiente Pessoal para ver o resumo.</p>
+        ) : !f.hasAccounts && f.month.incomeTotal === 0 && f.month.expenseTotal === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Nenhum dado financeiro ainda. <Link href="/financas/pessoal?aba=contas" className="text-primary hover:underline">Cadastrar contas</Link>
+          </p>
+        ) : (
+          <div className="grid gap-3">
+            <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+              <div><dt className="text-xs text-muted-foreground">Receitas</dt><dd className="tabular font-semibold text-success">{brl(f.month.incomeTotal)}</dd></div>
+              <div><dt className="text-xs text-muted-foreground">Despesas</dt><dd className="tabular font-semibold text-danger">{brl(f.month.expenseTotal)}</dd></div>
+              <div><dt className="text-xs text-muted-foreground">Resultado</dt><dd className={cn("tabular font-semibold", f.month.result < 0 ? "text-danger" : "text-success")}>{brl(f.month.result)}</dd></div>
+              <div><dt className="text-xs text-muted-foreground">Saldo nas contas</dt><dd className="tabular font-semibold">{brl(f.balanceCents)}</dd></div>
+            </dl>
+            <p className="text-xs text-muted-foreground">Inclui previstos e faturas de cartão do mês. Realizado até agora: {brl(f.month.resultRealized)}.</p>
+            {f.dueSoon.length > 0 && (
+              <div className="grid gap-1">
+                <p className="text-xs font-medium">A pagar nos próximos 7 dias</p>
+                <ul className="grid gap-1 text-sm">
+                  {f.dueSoon.slice(0, 5).map((d) => (
+                    <li key={d.key} className="flex items-center gap-2">
+                      <span className={cn("w-12 tabular text-xs", d.overdue ? "font-medium text-danger" : "text-muted-foreground")}>{d.dueDate.slice(8, 10)}/{d.dueDate.slice(5, 7)}</span>
+                      <span className="flex-1 truncate">{d.label}</span>
+                      <span className="tabular">{brl(d.amountCents)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
         )}
       </CardContent>
     </Card>

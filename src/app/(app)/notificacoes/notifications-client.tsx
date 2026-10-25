@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Bell, BellRing, CalendarCheck, CalendarDays, CheckCheck, Eye, Trash2 } from "lucide-react";
+import { Bell, BellRing, CalendarCheck, CalendarDays, CheckCheck, Eye, Receipt, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +20,7 @@ const ICON: Record<string, React.ComponentType<{ className?: string }>> = {
   WEEKLY_REVIEW: CalendarCheck,
   MONTHLY_REVIEW: CalendarCheck,
   EVENT_REMINDER: BellRing,
+  BILL_DUE: Receipt,
 };
 const WEEKDAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
@@ -187,6 +188,9 @@ function PrefsCard({ prefs }: { prefs: NotificationPrefs }) {
           <label className="flex items-center gap-2 text-sm">
             <Checkbox checked={v.inAppEnabled} onChange={(e) => set("inAppEnabled", e.target.checked)} /> Notificações no app
           </label>
+          <Field label="Avisar contas com quantos dias de antecedência" htmlFor="pf-bills">
+            <Input id="pf-bills" type="number" min={0} max={30} value={v.billDueDaysBefore} onChange={(e) => set("billDueDaysBefore", Math.min(30, Math.max(0, Number(e.target.value) || 0)))} className="w-24" />
+          </Field>
           <div className="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-3 text-sm">
             <Checkbox checked={v.dailyEnabled} onChange={(e) => set("dailyEnabled", e.target.checked)} aria-label="Resumo diário" id="pf-daily" />
             <Field label="Resumo diário às" htmlFor="pf-daily-time">

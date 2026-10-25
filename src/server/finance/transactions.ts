@@ -5,16 +5,10 @@ import { db } from "@/server/db";
 import { AppError, NotFoundError } from "@/server/errors";
 import { addMonthsYmd, dateToYmd, todayYmd, ymdToDate } from "@/lib/dates";
 import { splitInstallments } from "@/lib/money";
+import { NATURES, NATURE_LABEL } from "@/lib/finance/labels";
 import { assertAccount, assertCategory, auditFinance, cents, financeAccess, monthRange, ymd, ym } from "./common";
 
-export const NATURES = ["ONE_OFF", "FIXED", "VARIABLE", "RECURRING", "INSTALLMENT"] as const;
-export const NATURE_LABEL: Record<(typeof NATURES)[number], string> = {
-  ONE_OFF: "Avulsa",
-  FIXED: "Fixa",
-  VARIABLE: "Variável",
-  RECURRING: "Recorrente",
-  INSTALLMENT: "Parcelada",
-};
+export { NATURES, NATURE_LABEL };
 
 export const transactionCreateSchema = z
   .object({

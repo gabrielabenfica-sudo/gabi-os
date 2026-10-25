@@ -6,6 +6,7 @@ export const WIDGETS = [
   { id: "priorities", label: "Prioridades" },
   { id: "overdue", label: "Tarefas atrasadas" },
   { id: "habits", label: "Hábitos" },
+  { id: "finance", label: "Resumo financeiro" },
   { id: "completion-chart", label: "Tarefas concluídas por dia" },
 ] as const;
 export type WidgetId = (typeof WIDGETS)[number]["id"];

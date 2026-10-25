@@ -5,6 +5,8 @@ import { NotFoundError } from "@/server/errors";
 import { accessibleWorkspaceIds } from "@/server/workspaces";
 import { listOccurrences } from "@/server/calendar";
 import { listHabits } from "@/server/habits";
+import { findFinanceWorkspace } from "@/server/finance/common";
+import { payables, type DueItem } from "@/server/finance/summary";
 import {
   addDaysYmd, dateToYmd, endOfMonthYmd, formatYmdBR, startOfMonthYmd, startOfWeekYmd,
   todayYmd, ymdInTz, ymdToDate, zonedToUtc,
@@ -79,6 +81,17 @@ function rangeUtc(from: string, to: string, tz: string) {
   return { start: zonedToUtc(from, "00:00", tz), end: zonedToUtc(addDaysYmd(to, 1), "00:00", tz) };
 }
 
+/** Contas a pagar (Pessoal e Mentoria) vencidas ou que vencem nos próximos dias. */
+async function billsDue(userId: string, tz: string, days: number): Promise<(DueItem & { area: string })[]> {
+  const out: (DueItem & { area: string })[] = [];
+  for (const [kind, area, path] of [["PESSOAL", "Pessoal", "/financas/pessoal"], ["MENTORIA", "Mentoria", "/financas/mentoria"]] as const) {
+    const ws = await findFinanceWorkspace(userId, kind);
+    if (!ws) continue;
+    for (const item of await payables(userId, ws.id, tz, days)) out.push({ ...item, area, href: item.href.startsWith("?") ? `${path}${item.href}` : item.href });
+  }
+  return out.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+}
+
 export async function buildDailyDigest(userId: string, day: string, tz: string): Promise<DigestData> {
   const ids = await accessibleWorkspaceIds(userId, "tasks");
   const { start, end } = rangeUtc(day, day, tz);
@@ -95,6 +108,8 @@ export async function buildDailyDigest(userId: string, day: string, tz: string):
     }),
     listHabits(userId, { from: day, to: day }, tz),
   ]);
+  const prefs = await getPrefs(userId);
+  const bills = await billsDue(userId, tz, prefs.billDueDaysBefore);
   const active = events.filter((e) => e.status !== "CANCELLED");
   return {
     kind: "DAILY",
@@ -114,12 +129,21 @@ export async function buildDailyDigest(userId: string, day: string, tz: string):
       },
       { title: "Em andamento", empty: "Nenhuma tarefa em andamento.", items: inProgress.map((t) => ({ label: t.title, link: `/tarefas?t=${t.id}` })) },
       {
+        title: "Contas a vencer",
+        empty: "Nenhuma conta vencida ou a vencer nos próximos dias.",
+        items: bills.map((b) => ({
+          label: b.label,
+          detail: `${b.overdue ? "Vencida em" : "Vence"} ${formatYmdBR(b.dueDate)} · ${(b.amountCents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} · ${b.area}`,
+          link: b.href,
+        })),
+      },
+      {
         title: "Hábitos de hoje",
         empty: "Nenhum hábito ativo.",
         items: habits.filter((h) => h.expectedToday).map((h) => ({ label: h.name, detail: h.doneToday ? "Feito" : "Pendente", link: "/habitos" })),
       },
     ],
-    stats: { events: active.length, dueToday: dueToday.length, overdue: overdue.length, inProgress: inProgress.length },
+    stats: { events: active.length, dueToday: dueToday.length, overdue: overdue.length, inProgress: inProgress.length, bills: bills.length },
   };
 }
 
@@ -190,7 +214,7 @@ export const buildMonthlyReview = (userId: string, monthStart: string, tz: strin
 function summarize(d: DigestData): string {
   const s = d.stats ?? {};
   if (d.kind === "DAILY") {
-    return [`${s.events ?? 0} compromisso(s)`, `${s.dueToday ?? 0} tarefa(s) para hoje`, s.overdue ? `${s.overdue} atrasada(s)` : null].filter(Boolean).join(" · ");
+    return [`${s.events ?? 0} compromisso(s)`, `${s.dueToday ?? 0} tarefa(s) para hoje`, s.overdue ? `${s.overdue} atrasada(s)` : null, s.bills ? `${s.bills} conta(s) a vencer` : null].filter(Boolean).join(" · ");
   }
   return [`${s.completedTasks ?? 0} tarefa(s) concluída(s)`, `${s.pendingTasks ?? 0} pendente(s)`, s.habitRate != null ? `hábitos ${s.habitRate}%` : null].filter(Boolean).join(" · ");
 }
@@ -263,6 +287,26 @@ export async function generateDueNotifications(userId: string, tz: string, now =
     if (o.start.getTime() - minutes * 60_000 > now.getTime()) continue;
     const when = o.allDay ? "hoje" : `às ${timeLabel(o.start, tz)}${ymdInTz(o.start, tz) !== today ? ` de ${formatYmdBR(ymdInTz(o.start, tz))}` : ""}`;
     if (await createOnce({ userId, workspaceId: o.workspace.id, type: "EVENT_REMINDER", title: o.title, body: `Começa ${when} · ${o.workspace.name}`, link: "/agenda", dedupeKey: `REMINDER:${userId}:${o.key}` })) created++;
+  }
+
+  // Avisos de contas a vencer (um por conta e vencimento)
+  try {
+    for (const b of await billsDue(userId, tz, prefs.billDueDaysBefore)) {
+      const brl = (b.amountCents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+      if (
+        await createOnce({
+          userId,
+          type: "BILL_DUE",
+          title: `${b.overdue ? "Conta vencida" : "Conta a vencer"}: ${b.label}`,
+          body: `${brl} · ${b.overdue ? "venceu em" : "vence em"} ${formatYmdBR(b.dueDate)} · ${b.area}`,
+          link: b.href,
+          dedupeKey: `BILL:${userId}:${b.key}:${b.dueDate}`,
+        })
+      )
+        created++;
+    }
+  } catch (error) {
+    console.error("Falha ao gerar avisos de contas", error);
   }
 
   return { created };

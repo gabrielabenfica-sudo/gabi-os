@@ -4,6 +4,9 @@ import { accessibleWorkspaceIds } from "@/server/workspaces";
 import { listOccurrences } from "@/server/calendar";
 import { listHabits } from "@/server/habits";
 import { taskCardInclude, taskStats } from "@/server/tasks";
+import { findFinanceWorkspace } from "@/server/finance/common";
+import { balancesFor } from "@/server/finance/accounts";
+import { payables, personalMonthly } from "@/server/finance/summary";
 import { addDaysYmd, eachDayYmd, endOfMonthYmd, startOfMonthYmd, startOfWeekYmd, todayYmd, ymdInTz, ymdToDate, zonedToUtc } from "@/lib/dates";
 
 import { WIDGETS } from "@/lib/dashboard-widgets";
@@ -90,6 +93,20 @@ export async function getDashboard(userId: string, tz: string, workspaceFilter: 
     if (perDay.has(d)) perDay.set(d, perDay.get(d)! + 1);
   }
 
+  // Resumo financeiro pessoal do mês corrente (só quando o filtro inclui o ambiente Pessoal)
+  const pessoal = await findFinanceWorkspace(userId, "PESSOAL");
+  let finance: null | { month: Awaited<ReturnType<typeof personalMonthly>>[number]; balanceCents: number; dueSoon: Awaited<ReturnType<typeof payables>>; hasAccounts: boolean } = null;
+  if (pessoal && (workspaceFilter === "all" || workspaceFilter === pessoal.id)) {
+    const ym = today.slice(0, 7);
+    const accounts = await db.financialAccount.findMany({ where: { workspaceId: pessoal.id, archived: false }, select: { id: true } });
+    const [monthRow, due, bal] = await Promise.all([
+      personalMonthly(userId, pessoal, ym, ym),
+      payables(userId, pessoal.id, tz, 7),
+      balancesFor(accounts.map((a) => a.id)),
+    ]);
+    finance = { month: monthRow[0]!, balanceCents: [...bal.values()].reduce((a, b) => a + b, 0), dueSoon: due, hasAccounts: accounts.length > 0 };
+  }
+
   const expectedToday = habits.filter((h) => h.expectedToday);
   const rated = habits.filter((h) => h.stats.rate !== null);
 
@@ -111,6 +128,7 @@ export async function getDashboard(userId: string, tz: string, workspaceFilter: 
     priorities: sortedPriorities,
     overdue,
     completionSeries: days.map((d) => ({ day: d, count: perDay.get(d)! })),
+    finance,
     habits: {
       expectedToday: expectedToday.length,
       doneToday: expectedToday.filter((h) => h.doneToday).length,

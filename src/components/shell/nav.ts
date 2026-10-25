@@ -1,5 +1,9 @@
 import {
+  BarChart3,
   Bell,
+  Briefcase,
+  GraduationCap,
+  Wallet,
   CalendarDays,
   LayoutDashboard,
   ListChecks,
@@ -35,6 +39,15 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/tarefas", label: "Tarefas", icon: ListChecks, keywords: ["kanban", "trello", "demandas", "quadro"], shortcut: "G T" },
       { href: "/anotacoes", label: "Anotações", icon: NotebookPen, keywords: ["notas", "cadernos", "texto"], shortcut: "G N" },
       { href: "/habitos", label: "Hábitos", icon: Repeat, keywords: ["rotina", "academia", "leitura", "devocional", "estudos"], shortcut: "G H" },
+    ],
+  },
+  {
+    title: "Financeiro",
+    items: [
+      { href: "/financas/pessoal", label: "Finanças pessoais", icon: Wallet, keywords: ["contas", "despesas", "receitas", "cartão", "fatura", "orçamento"], shortcut: "G F" },
+      { href: "/turbo/remuneracao", label: "Remuneração TURBO", icon: Briefcase, keywords: ["salário", "bonificação", "bônus", "meta"] },
+      { href: "/financas/mentoria", label: "Financeiro Mentoria", icon: GraduationCap, keywords: ["vendas", "faturamento", "lucro", "recebíveis", "inadimplência"] },
+      { href: "/resultados", label: "Empresa e Resultados", icon: BarChart3, keywords: ["consolidado", "patrimônio", "comparativo"], shortcut: "G R" },
     ],
   },
   {

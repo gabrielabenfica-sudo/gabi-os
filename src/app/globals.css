@@ -40,6 +40,9 @@
   --danger-soft: #f6e1e2;
   --info: #4e6f8f;
   --info-soft: #e1e9f1;
+  /* Gráficos (validados para daltonismo): entradas × saídas */
+  --chart-in: #3069a8;
+  --chart-out: #c0587a;
   --radius: 0.625rem;
 }
 
@@ -75,6 +78,8 @@
   --danger-soft: #3a2224;
   --info: #93b4d4;
   --info-soft: #1f2a35;
+  --chart-in: #4c8bd6;
+  --chart-out: #d9668e;
 }
 
 @theme inline {
@@ -110,6 +115,8 @@
   --color-danger-soft: var(--danger-soft);
   --color-info: var(--info);
   --color-info-soft: var(--info-soft);
+  --color-chart-in: var(--chart-in);
+  --color-chart-out: var(--chart-out);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
