@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowUp, Copy, ExternalLink, NotebookPen, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Copy, ExternalLink, FileDown, NotebookPen, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -66,6 +66,9 @@ export function ContentDialog({
             />
             <div className="ml-auto flex gap-1">
               {item.publishedUrl && <Button size="sm" variant="ghost" asChild><a href={item.publishedUrl} target="_blank" rel="noreferrer"><ExternalLink /> Ver post</a></Button>}
+              <Button size="sm" variant="ghost" asChild>
+                <a href={`/imprimir/roteiros?ids=${encodeURIComponent(item.id)}`} target="_blank" rel="noreferrer"><FileDown /> PDF</a>
+              </Button>
               <Button
                 size="sm"
                 variant="ghost"

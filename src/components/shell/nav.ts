@@ -18,6 +18,7 @@ import {
   NotebookPen,
   Repeat,
   Settings,
+  Sun,
   type LucideIcon,
 } from "lucide-react";
 
@@ -43,6 +44,7 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     title: "Organização",
     items: [
+      { href: "/rotina", label: "Rotina do dia", icon: Sun, keywords: ["rotina", "dia", "planejamento", "horários", "blocos", "agenda do dia", "pdf"] },
       { href: "/agenda", label: "Agenda", icon: CalendarDays, keywords: ["calendário", "compromissos", "eventos", "reunião"], shortcut: "G A" },
       { href: "/tarefas", label: "Tarefas", icon: ListChecks, keywords: ["kanban", "trello", "demandas", "quadro"], shortcut: "G T" },
       { href: "/anotacoes", label: "Anotações", icon: NotebookPen, keywords: ["notas", "cadernos", "texto"], shortcut: "G N" },
