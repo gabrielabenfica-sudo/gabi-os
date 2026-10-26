@@ -22,9 +22,10 @@ Playwright · dnd-kit · FullCalendar · TipTap · rrule · Recharts · sonner �
 
 - `src/server/*` — regras de negócio. Funções recebem `userId` explícito e chamam
   `requireWorkspaceAccess(userId, workspaceId, { module, write })` antes de ler/gravar.
-  Módulos: tasks, calendar, notes, goals, habits, finance, crm, mentees, content.
+  Módulos: tasks, calendar, notes, goals, habits, routines, finance, crm, mentees, content.
   - `finance/` (contas, lançamentos, cartões, remuneração TURBO, vendas, resumos, importação OFX/CSV)
   - `crm.ts`, `mentees.ts`, `content.ts`, `goals.ts`, `maas.ts`, `reviews.ts`, `reports.ts`, `team.ts`
+  - `routines.ts` (Rotina: rotina do dia com horários e processos com execuções; cálculos em `src/lib/routines.ts`)
   - `integrations/` (Google Calendar e Instagram/Meta — testados só com respostas simuladas)
 - `src/lib/*` — funções puras e testáveis (datas, dinheiro, recorrência, metas, MAAS, parsers).
 - `src/app/(app)/<módulo>/` — páginas (`page.tsx` servidor) + `*-client.tsx` + `actions.ts`.

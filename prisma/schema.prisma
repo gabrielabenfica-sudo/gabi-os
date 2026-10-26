@@ -110,6 +110,7 @@ model Workspace {
   notes          Note[]
   goals          Goal[]
   habits         Habit[]
+  routines       Routine[]
   accounts       FinancialAccount[]
   categories     FinancialCategory[]
   transactions   FinancialTransaction[]
@@ -635,6 +636,95 @@ model HabitEntry {
   note    String?
 
   @@unique([habitId, date])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Rotina
+// ═══════════════════════════════════════════════════════════════
+
+enum RoutineKind {
+  // Rotina do dia: itens com horário, marcados a cada dia
+  SCHEDULE
+  // Processo: lista de passos executada quando a usuária inicia
+  CHECKLIST
+}
+
+model Routine {
+  id          String      @id @default(cuid())
+  workspaceId String
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  kind        RoutineKind
+  name        String
+  description String?
+  // SCHEDULE: dias da semana em que vale (0=domingo … 6=sábado)
+  daysOfWeek  Int[]       @default([])
+  color       String?
+  active      Boolean     @default(true)
+  position    Int         @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  items RoutineItem[]
+  runs  RoutineRun[]
+
+  @@index([workspaceId, kind])
+}
+
+model RoutineItem {
+  id         String    @id @default(cuid())
+  routineId  String
+  routine    Routine   @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  title      String
+  // SCHEDULE: horário "HH:MM"
+  time       String?
+  position   Int       @default(0)
+  createdAt  DateTime  @default(now())
+  // Item retirado da rotina: some dos dias seguintes, mas o histórico fica
+  archivedAt DateTime?
+
+  checks   RoutineCheck[]
+  runSteps RoutineRunStep[]
+
+  @@index([routineId])
+}
+
+// Item da rotina do dia cumprido em uma data
+model RoutineCheck {
+  id        String      @id @default(cuid())
+  itemId    String
+  item      RoutineItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  date      DateTime    @db.Date
+  createdAt DateTime    @default(now())
+
+  @@unique([itemId, date])
+}
+
+// Execução de um processo (CHECKLIST)
+model RoutineRun {
+  id          String    @id @default(cuid())
+  routineId   String
+  routine     Routine   @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  note        String?
+
+  steps RoutineRunStep[]
+
+  @@index([routineId, startedAt])
+}
+
+// Passo de uma execução (cópia do item no momento em que a execução começou)
+model RoutineRunStep {
+  id       String       @id @default(cuid())
+  runId    String
+  run      RoutineRun   @relation(fields: [runId], references: [id], onDelete: Cascade)
+  itemId   String?
+  item     RoutineItem? @relation(fields: [itemId], references: [id], onDelete: SetNull)
+  title    String
+  position Int
+  doneAt   DateTime?
+
+  @@index([runId])
 }
 
 // ═══════════════════════════════════════════════════════════════

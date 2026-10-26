@@ -16,7 +16,7 @@ export async function exportUserData(userId: string) {
   const inWs = { workspaceId: { in: ids } };
 
   const [
-    projects, taskStatuses, tasks, labels, events, noteFolders, notes, goals, habits,
+    projects, taskStatuses, tasks, labels, events, noteFolders, notes, goals, habits, routines,
     accounts, categories, transactions, transfers, creditCards, compensation, bonusRules,
     pipelineStages, programs, leads, mentees, sales, contentStatuses, contentItems,
     contentReferences, socialProfiles, attachments,
@@ -30,6 +30,7 @@ export async function exportUserData(userId: string) {
     db.note.findMany({ where: inWs, include: { links: true } }),
     db.goal.findMany({ where: inWs, include: { steps: true, progress: true } }),
     db.habit.findMany({ where: inWs, include: { entries: true } }),
+    db.routine.findMany({ where: inWs, include: { items: { include: { checks: true } }, runs: { include: { steps: true } } } }),
     db.financialAccount.findMany({ where: inWs }),
     db.financialCategory.findMany({ where: inWs }),
     db.financialTransaction.findMany({ where: inWs }),
@@ -63,7 +64,7 @@ export async function exportUserData(userId: string) {
     user,
     workspaces,
     data: {
-      projects, taskStatuses, tasks, labels, events, noteFolders, notes, goals, habits,
+      projects, taskStatuses, tasks, labels, events, noteFolders, notes, goals, habits, routines,
       accounts, categories, transactions, transfers, creditCards, compensation, bonusRules,
       pipelineStages, programs, leads, mentees, sales, contentStatuses, contentItems,
       contentReferences, socialProfiles, attachments, maasAreas, maasAssessments, reviews, notificationPrefs,
