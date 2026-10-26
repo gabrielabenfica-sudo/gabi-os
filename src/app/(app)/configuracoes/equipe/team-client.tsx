@@ -17,6 +17,7 @@ const MODULES = [
   { key: "calendar", label: "Agenda" },
   { key: "notes", label: "Anotações" },
   { key: "habits", label: "Hábitos" },
+  { key: "routines", label: "Rotina" },
   { key: "goals", label: "Metas" },
   { key: "content", label: "Conteúdo" },
   { key: "crm", label: "CRM" },

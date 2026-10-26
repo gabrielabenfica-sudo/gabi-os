@@ -10,6 +10,7 @@ export const MODULES = [
   "notes",
   "goals",
   "habits",
+  "routines",
   "finance",
   "crm",
   "mentees",

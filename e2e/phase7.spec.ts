@@ -51,7 +51,7 @@ test("convite: colaboradora entra só com os módulos liberados", async ({ page,
 
 test("páginas principais abrem sem erro e o menu lista os módulos", async ({ page }) => {
   await login(page);
-  const pages = ["/", "/agenda", "/tarefas", "/anotacoes", "/habitos", "/financas/pessoal", "/financas/mentoria", "/turbo/remuneracao", "/resultados", "/mentoria/crm", "/mentoria/mentorados", "/conteudo", "/metas", "/maas", "/objetivos", "/revisoes", "/relatorios", "/notificacoes", "/configuracoes", "/configuracoes/integracoes", "/configuracoes/equipe"];
+  const pages = ["/", "/agenda", "/tarefas", "/anotacoes", "/habitos", "/rotina", "/rotina?aba=processos", "/financas/pessoal", "/financas/mentoria", "/turbo/remuneracao", "/resultados", "/mentoria/crm", "/mentoria/mentorados", "/conteudo", "/metas", "/maas", "/objetivos", "/revisoes", "/relatorios", "/notificacoes", "/configuracoes", "/configuracoes/integracoes", "/configuracoes/equipe"];
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(`${page.url()}: ${e.message}`));
   for (const p of pages) {
@@ -61,5 +61,5 @@ test("páginas principais abrem sem erro e o menu lista os módulos", async ({ p
   }
   expect(errors).toEqual([]);
   const nav = page.getByRole("navigation").first();
-  for (const label of ["CRM", "Mentorados", "Conteúdo", "Metas", "MAAS", "Relatórios"]) await expect(nav.getByRole("link", { name: label })).toBeVisible();
+  for (const label of ["Rotina", "CRM", "Mentorados", "Conteúdo", "Metas", "MAAS", "Relatórios"]) await expect(nav.getByRole("link", { name: label })).toBeVisible();
 });
