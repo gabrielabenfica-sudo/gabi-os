@@ -54,6 +54,8 @@ model User {
   importBatches     ImportBatch[]
   reviews           Review[]
   invitationsSent   Invitation[]
+  routineItems      RoutineItem[]
+  routineTemplate   RoutineTemplateItem[]
 }
 
 model Session {
@@ -132,6 +134,8 @@ model Workspace {
   attachments    Attachment[]
   importBatches  ImportBatch[]
   invitations    Invitation[]
+  routineItems   RoutineItem[]
+  routineTemplate RoutineTemplateItem[]
 
   @@index([ownerId])
 }
@@ -1473,4 +1477,45 @@ model IntegrationSyncLog {
   finishedAt DateTime?
 
   @@index([userId, provider, startedAt])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Rotina do dia (pessoal de cada usuária; o ambiente é só uma etiqueta)
+// ═══════════════════════════════════════════════════════════════
+
+model RoutineItem {
+  id          String     @id @default(cuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspaceId String?
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  date        DateTime   @db.Date
+  // "HH:MM" no fuso da usuária; sem horário = "a qualquer hora do dia"
+  startTime   String?
+  endTime     String?
+  title       String
+  notes       String?
+  done        Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([userId, date])
+}
+
+model RoutineTemplateItem {
+  id          String     @id @default(cuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspaceId String?
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  // 0=domingo … 6=sábado
+  weekdays    Int[]      @default([])
+  startTime   String?
+  endTime     String?
+  title       String
+  notes       String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([userId])
 }

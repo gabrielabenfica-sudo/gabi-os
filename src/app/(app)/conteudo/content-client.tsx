@@ -2,12 +2,13 @@
 
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { CalendarDays, ChevronLeft, ChevronRight, Columns3, Film, LayoutList, Plus, Search, Send } from "lucide-react";
+import Link from "next/link";
+import { CalendarDays, ChevronLeft, ChevronRight, Columns3, FileDown, Film, LayoutList, Plus, Search, Send, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input, Select } from "@/components/ui/form-controls";
-import { EmptyState, LinkTabs, PageHeader, WsDot } from "@/components/ui/misc";
+import { Checkbox, EmptyState, LinkTabs, PageHeader, WsDot } from "@/components/ui/misc";
 import { Kanban } from "@/components/kanban";
 import { CONTENT_FORMATS, engagementRate, formatLabel } from "@/lib/content";
 import { addDaysYmd, addMonthsYm, formatYm, startOfWeekYmd } from "@/lib/dates";
@@ -81,6 +82,7 @@ export function ContentClient({
         actions={
           <>
             {tab === "producao" && <Button variant="outline" onClick={() => setDialog({ kind: "statuses" })}><Columns3 /> Etapas</Button>}
+            {tab !== "lista" && <Button variant="outline" asChild><Link href={tabHref("lista")}><FileDown /> Exportar roteiros</Link></Button>}
             <Button onClick={() => setDialog({ kind: "item", preset: { workspaceId: boardWorkspaceId } })}><Plus /> Novo conteúdo</Button>
           </>
         }
@@ -185,13 +187,53 @@ function ContentCardView({ item, tz, dragging }: { item: ContentCard; tz: string
   );
 }
 
+/** Link da página de PDF com os roteiros escolhidos, na ordem da lista. */
+export function scriptsPdfHref(ids: string[]) {
+  return `/imprimir/roteiros?ids=${ids.map(encodeURIComponent).join(",")}`;
+}
+
 function ContentList({ items, tz, onOpen }: { items: ContentCard[]; tz: string; onOpen: (id: string) => void }) {
+  // Seleção para exportar roteiros; some sozinha quando o item sai da lista (filtro/busca)
+  const [picked, setPicked] = React.useState<Set<string>>(new Set());
+  const visible = items.filter((i) => picked.has(i.id));
+  const allOn = items.length > 0 && visible.length === items.length;
+  const toggle = (id: string) =>
+    setPicked((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
   if (!items.length) return <EmptyState icon={LayoutList} title="Nenhum conteúdo" description="Crie ideias e acompanhe cada etapa até a publicação." />;
   return (
-    <div className="overflow-x-auto rounded-xl border border-border">
-      <table className="w-full min-w-[720px] text-sm">
+    <div className="grid gap-2">
+      <div className="flex min-h-11 flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm" data-testid="scripts-export-bar">
+        {visible.length ? (
+          <>
+            <span className="font-medium" data-testid="selected-count">{visible.length} {visible.length === 1 ? "selecionado" : "selecionados"}</span>
+            <Button size="sm" asChild>
+              <a href={scriptsPdfHref(visible.map((i) => i.id))} target="_blank" rel="noreferrer" data-testid="export-scripts"><FileDown /> Exportar roteiros em PDF</a>
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setPicked(new Set())}><X /> Limpar seleção</Button>
+          </>
+        ) : (
+          <span className="text-muted-foreground">Marque os conteúdos para exportar os roteiros juntos em um PDF.</span>
+        )}
+      </div>
+      <div className="overflow-x-auto rounded-xl border border-border">
+      <table className="w-full min-w-[760px] text-sm">
         <thead className="bg-muted/60 text-left text-xs text-muted-foreground">
           <tr>
+            <th className="w-10 px-3 py-2">
+              <Checkbox
+                aria-label={allOn ? "Desmarcar todos" : "Selecionar todos"}
+                checked={allOn}
+                ref={(el) => {
+                  if (el) el.indeterminate = visible.length > 0 && !allOn;
+                }}
+                onChange={() => setPicked(allOn ? new Set() : new Set(items.map((i) => i.id)))}
+              />
+            </th>
             <th className="px-3 py-2 font-medium">Título</th>
             <th className="px-3 py-2 font-medium">Etapa</th>
             <th className="px-3 py-2 font-medium">Formato</th>
@@ -207,7 +249,10 @@ function ContentList({ items, tz, onOpen }: { items: ContentCard[]; tz: string; 
             const eng = m ? engagementRate(m) : null;
             const pub = i.publishedAt ?? i.publishDate;
             return (
-              <tr key={i.id} className="cursor-pointer border-t border-border hover:bg-accent/50" onClick={() => onOpen(i.id)} data-row={i.title}>
+              <tr key={i.id} className={cn("cursor-pointer border-t border-border hover:bg-accent/50", picked.has(i.id) && "bg-accent/40")} onClick={() => onOpen(i.id)} data-row={i.title}>
+                <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                  <Checkbox aria-label={`Selecionar ${i.title}`} checked={picked.has(i.id)} onChange={() => toggle(i.id)} />
+                </td>
                 <td className="px-3 py-2">
                   <span className="flex items-center gap-2"><WsDot color={i.workspace.color} /><button type="button" className="text-left font-medium hover:underline">{i.title}</button></span>
                 </td>
@@ -222,6 +267,7 @@ function ContentList({ items, tz, onOpen }: { items: ContentCard[]; tz: string; 
           })}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

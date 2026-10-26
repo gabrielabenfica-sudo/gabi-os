@@ -161,6 +161,22 @@ export async function getContent(userId: string, id: string) {
   return item;
 }
 
+/**
+ * Conteúdos escolhidos para exportar os roteiros (PDF), na ordem em que foram pedidos.
+ * Ignora o que não existe mais ou de ambientes sem acesso ao módulo.
+ */
+export async function contentForExport(userId: string, ids: string[]) {
+  const wanted = [...new Set(ids.filter((id) => typeof id === "string" && id.length > 0 && id.length <= 64))].slice(0, 300);
+  if (!wanted.length) return [];
+  const workspaceIds = await accessibleWorkspaceIds(userId, "content");
+  const items = await db.contentItem.findMany({
+    where: { id: { in: wanted }, deletedAt: null, workspaceId: { in: workspaceIds } },
+    include: { status: { select: { name: true } }, profile: { select: { username: true } }, workspace: { select: { name: true, color: true } } },
+  });
+  const byId = new Map(items.map((i) => [i.id, i]));
+  return wanted.map((id) => byId.get(id)).filter((i): i is NonNullable<typeof i> => Boolean(i));
+}
+
 export async function createContent(userId: string, input: ContentInput, tz: string) {
   const data = contentSchema.parse(input);
   await access(userId, data.workspaceId, true);

@@ -49,11 +49,13 @@ export async function exportUserData(userId: string) {
     db.attachment.findMany({ where: inWs, select: { id: true, workspaceId: true, entityType: true, entityId: true, name: true, url: true, mimeType: true, sizeBytes: true, createdAt: true } }),
   ]);
 
-  const [maasAreas, maasAssessments, notificationPrefs, reviews] = await Promise.all([
+  const [maasAreas, maasAssessments, notificationPrefs, reviews, routineItems, routineTemplate] = await Promise.all([
     db.maasArea.findMany({ where: { userId } }),
     db.maasAssessment.findMany({ where: { userId }, include: { scores: true } }),
     db.notificationPreference.findUnique({ where: { userId } }),
     db.review.findMany({ where: { userId } }),
+    db.routineItem.findMany({ where: { userId }, orderBy: { date: "asc" } }),
+    db.routineTemplateItem.findMany({ where: { userId } }),
   ]);
 
   return {
@@ -67,6 +69,7 @@ export async function exportUserData(userId: string) {
       accounts, categories, transactions, transfers, creditCards, compensation, bonusRules,
       pipelineStages, programs, leads, mentees, sales, contentStatuses, contentItems,
       contentReferences, socialProfiles, attachments, maasAreas, maasAssessments, reviews, notificationPrefs,
+      routineItems, routineTemplate,
     },
   };
 }
