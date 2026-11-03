@@ -2,7 +2,7 @@
 // Everything else goes straight from the browser to Neon.
 import http from "node:http";
 import { Readable } from "node:stream";
-import { corsHeaders, json } from "./lib.mjs";
+import { corsHeaders, json, sql } from "./lib.mjs";
 import { assistant } from "./assistant.mjs";
 import { integrations } from "./integrations.mjs";
 import { integrationsCallback } from "./callback.mjs";
@@ -15,10 +15,24 @@ const routes = {
   "/functions/v1/seed-gabi-os": seed,
 };
 
+// Temporary: receives the export of the old app (Enter) so it can be moved into Neon.
+// Only works while MIGRATION_TOKEN is set on the server; remove it after the move.
+async function importStaging(req) {
+  const expected = process.env.MIGRATION_TOKEN ?? "";
+  if (!expected || req.headers.get("x-migration-token") !== expected) return json({ error: "forbidden" }, 403);
+  const payload = await req.json().catch(() => null);
+  if (!payload || typeof payload !== "object") return json({ error: "invalid payload" }, 400);
+  const [row] = await sql`
+    insert into public.migration_staging (source, payload) values ('enter', ${JSON.stringify(payload)}::jsonb)
+    returning id`;
+  return json({ ok: true, id: row.id });
+}
+
 async function handle(req) {
   const { pathname } = new URL(req.url);
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (pathname === "/" || pathname === "/health") return json({ ok: true, service: "gabi-os-api" });
+  if (pathname === "/migration/import" && req.method === "POST") return importStaging(req);
   const route = routes[pathname.replace(/\/$/, "")];
   if (!route) return json({ error: "not found" }, 404);
   return route(req);

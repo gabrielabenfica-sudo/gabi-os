@@ -28,7 +28,7 @@ const jwks = createRemoteJWKSet(new URL(`${AUTH_URL}/.well-known/jwks.json`));
 
 export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-session-id",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-session-id, x-migration-token",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
