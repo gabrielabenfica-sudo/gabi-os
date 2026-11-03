@@ -32,7 +32,8 @@ import {
   useContentStatuses,
   useSocialProfiles,
 } from "@/lib/queries";
-import { useSaveContentItem } from "@/lib/mutations";
+import { useCreateContentItem, useSaveContentItem } from "@/lib/mutations";
+import { toast } from "sonner";
 import { PageHeader, StatCard } from "@/components/common/page-parts";
 import type { ContentItem } from "@/lib/types";
 
@@ -51,6 +52,11 @@ export default function Conteudo() {
   const { data: profiles = [] } = useSocialProfiles();
   const { data: references = [] } = useContentReferences();
   const saveItem = useSaveContentItem();
+  const createItem = useCreateContentItem();
+
+  const emptyNew = { title: "", format: "REELS", profile_id: "", status_id: "", owner: "", hook: "", script: "", cta: "", publish_date: "" };
+  const [creating, setCreating] = useState(false);
+  const [newItem, setNewItem] = useState(emptyNew);
 
   const [selected, setSelected] = useState<ContentItem | null>(null);
   const [draft, setDraft] = useState({ status_id: "", hook: "", script: "", cta: "" });
@@ -88,6 +94,38 @@ export default function Conteudo() {
     );
   };
 
+  const openNew = (statusId?: string) => {
+    setNewItem({ ...emptyNew, status_id: statusId ?? workspaceStatuses[0]?.id ?? "" });
+    setCreating(true);
+  };
+
+  const submitNew = () => {
+    if (!newItem.title.trim() || !active?.id) return;
+    createItem.mutate(
+      {
+        workspace_id: active.id,
+        title: newItem.title.trim(),
+        format: newItem.format,
+        platform: "instagram",
+        profile_id: newItem.profile_id || null,
+        status_id: newItem.status_id || null,
+        owner: newItem.owner.trim() || null,
+        hook: newItem.hook || null,
+        script: newItem.script || null,
+        cta: newItem.cta || null,
+        publish_date: newItem.publish_date ? new Date(`${newItem.publish_date}:00-03:00`).toISOString() : null,
+        position: workspaceItems.length,
+      },
+      {
+        onSuccess: () => {
+          toast.success("Conteúdo criado.");
+          setCreating(false);
+        },
+        onError: (error) => toast.error(`Não foi possível criar o conteúdo. ${error instanceof Error ? error.message : ""}`),
+      },
+    );
+  };
+
   const published = workspaceItems.filter((item) => item.published_at);
   const scheduled = workspaceItems.filter((item) => !item.published_at && item.publish_date);
 
@@ -96,11 +134,16 @@ export default function Conteudo() {
       <PageHeader
         eyebrow="Conteúdo"
         title="Do roteiro ao publicado"
-        description="Os 64 conteúdos da TURBO, com gancho, roteiro e CTA — organizados pela etapa de produção."
+        description="Seus conteúdos com gancho, roteiro e CTA, organizados pela etapa de produção."
         actions={
-          <Badge variant="outline" className="h-8 gap-1 px-3 text-xs">
-            <Instagram className="size-3.5" /> {active?.name ?? "—"}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="h-8 gap-1 px-3 text-xs">
+              <Instagram className="size-3.5" /> {active?.name ?? "—"}
+            </Badge>
+            <Button size="sm" onClick={() => openNew()} disabled={!active}>
+              <Plus className="size-4" /> Novo conteúdo
+            </Button>
+          </div>
         }
       />
 
@@ -117,6 +160,11 @@ export default function Conteudo() {
         </TabsList>
 
         <TabsContent value="producao" className="pt-4">
+          {workspaceStatuses.length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+              Esta área ainda não tem etapas de produção de conteúdo. Troque para “Trabalho TURBO” no menu para ver o quadro.
+            </p>
+          ) : null}
           <div className="flex gap-3 overflow-x-auto pb-3 scrollbar-thin">
             {workspaceStatuses.map((status) => {
               const columnItems = workspaceItems.filter((item) => item.status_id === status.id);
@@ -161,6 +209,13 @@ export default function Conteudo() {
                     {columnItems.length === 0 ? (
                       <p className="px-2 py-5 text-center text-[11px] text-muted-foreground">vazio</p>
                     ) : null}
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-center gap-1 rounded-xl py-1.5 text-[11px] text-muted-foreground transition hover:bg-secondary hover:text-foreground"
+                      onClick={() => openNew(status.id)}
+                    >
+                      <Plus className="size-3" /> adicionar
+                    </button>
                   </div>
                 </div>
               );
@@ -317,6 +372,90 @@ export default function Conteudo() {
           <DialogFooter>
             <Button type="button" onClick={submit} disabled={saveItem.isPending}>
               Salvar conteúdo
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={creating} onOpenChange={setCreating}>
+        <DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl">Novo conteúdo</DialogTitle>
+            <DialogDescription>Área: {active?.name ?? "—"}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="new-title">Título</Label>
+              <Input
+                id="new-title"
+                value={newItem.title}
+                placeholder="Ex.: 3 erros que travam seu tráfego pago"
+                onChange={(event) => setNewItem({ ...newItem, title: event.target.value })}
+              />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>Formato</Label>
+                <Select value={newItem.format} onValueChange={(value) => setNewItem({ ...newItem, format: value })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(FORMAT_LABEL).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Etapa</Label>
+                <Select value={newItem.status_id} onValueChange={(value) => setNewItem({ ...newItem, status_id: value })}>
+                  <SelectTrigger><SelectValue placeholder="Etapa" /></SelectTrigger>
+                  <SelectContent>
+                    {workspaceStatuses.map((status) => (
+                      <SelectItem key={status.id} value={status.id}>{status.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Perfil</Label>
+                <Select value={newItem.profile_id} onValueChange={(value) => setNewItem({ ...newItem, profile_id: value })}>
+                  <SelectTrigger><SelectValue placeholder="Escolha o perfil" /></SelectTrigger>
+                  <SelectContent>
+                    {profiles.map((profile) => (
+                      <SelectItem key={profile.id} value={profile.id}>@{profile.username ?? profile.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="new-owner">Quem grava</Label>
+                <Input
+                  id="new-owner"
+                  value={newItem.owner}
+                  placeholder="Ex.: Samuel"
+                  onChange={(event) => setNewItem({ ...newItem, owner: event.target.value })}
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-hook">Gancho</Label>
+              <Textarea id="new-hook" rows={2} value={newItem.hook} onChange={(event) => setNewItem({ ...newItem, hook: event.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-script">Roteiro</Label>
+              <Textarea id="new-script" rows={6} className="text-sm leading-relaxed" value={newItem.script} onChange={(event) => setNewItem({ ...newItem, script: event.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-cta">CTA</Label>
+              <Textarea id="new-cta" rows={2} value={newItem.cta} onChange={(event) => setNewItem({ ...newItem, cta: event.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-publish">Publicação (opcional)</Label>
+              <Input id="new-publish" type="datetime-local" value={newItem.publish_date} onChange={(event) => setNewItem({ ...newItem, publish_date: event.target.value })} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" onClick={submitNew} disabled={createItem.isPending || !newItem.title.trim()}>
+              Criar conteúdo
             </Button>
           </DialogFooter>
         </DialogContent>

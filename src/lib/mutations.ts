@@ -175,6 +175,19 @@ export function useSaveContentItem() {
   });
 }
 
+export function useCreateContentItem() {
+  const invalidate = useInvalidator();
+  return useMutation({
+    mutationFn: async (values: Record<string, unknown>) => {
+      const { error } = await supabase
+        .from("content_items")
+        .insert({ id: crypto.randomUUID(), ...values });
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("content-items"),
+  });
+}
+
 export function useSaveNote() {
   const invalidate = useInvalidator();
   return useMutation({
@@ -238,7 +251,7 @@ export function useCreateSocialProfile() {
   const invalidate = useInvalidator();
   return useMutation({
     mutationFn: async (values: Record<string, unknown>) => {
-      const { error } = await supabase.from("social_profiles").insert(values);
+      const { error } = await supabase.from("social_profiles").insert({ id: crypto.randomUUID(), ...values });
       if (error) throw error;
     },
     onSuccess: () => invalidate("social-profiles"),
