@@ -1,0 +1,20 @@
+-- Server-only tables for OAuth app credentials and CSRF state.
+create table if not exists public.integration_config (
+  provider text primary key,
+  client_id text,
+  client_secret text,
+  extra jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.oauth_states (
+  state text primary key,
+  user_id uuid not null,
+  provider text not null,
+  app_origin text not null,
+  created_at timestamptz not null default now()
+);
+
+alter table public.integration_config enable row level security;
+alter table public.oauth_states enable row level security;
+-- No policies on purpose: only backend functions (service role) read or write these.

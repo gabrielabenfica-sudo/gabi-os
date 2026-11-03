@@ -1,0 +1,5 @@
+-- Make the dedupe target usable by ON CONFLICT (user_id, external_id).
+-- NULLs remain distinct in a plain unique index, so manual rows are unaffected.
+drop index if exists public.finance_transactions_external_idx;
+create unique index if not exists finance_transactions_external_unique
+  on public.finance_transactions (user_id, external_id);

@@ -1,0 +1,30 @@
+-- Manual finance entries, separated by scope (EMPRESA / PESSOAL)
+create table if not exists public.finance_transactions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid(),
+  scope text not null,
+  kind text not null,
+  description text not null,
+  amount_cents bigint not null,
+  occurred_on date not null,
+  category text,
+  account_label text,
+  source text not null default 'MANUAL',
+  external_id text,
+  notes text,
+  created_at timestamptz not null default now()
+);
+
+create unique index if not exists finance_transactions_external_idx
+  on public.finance_transactions (user_id, external_id)
+  where external_id is not null;
+
+create index if not exists finance_transactions_user_idx
+  on public.finance_transactions (user_id, scope, occurred_on desc);
+
+alter table public.finance_transactions enable row level security;
+
+create policy "finance_transactions own" on public.finance_transactions
+  for all to authenticated
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());

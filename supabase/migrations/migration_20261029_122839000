@@ -1,0 +1,1 @@
+update public.profiles set name = 'Gabriela Benfica' where name is null or length(name) < 5;

@@ -1,0 +1,31 @@
+-- Bank accounts belong to a scope and can exist without a workspace
+alter table public.accounts add column if not exists scope text;
+alter table public.accounts alter column workspace_id drop not null;
+
+alter table public.finance_transactions add column if not exists account_id text;
+
+-- Installment plans (credit card, check, loan, receipts), always tied to an account
+create table if not exists public.finance_installments (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid(),
+  account_id text references public.accounts(id) on delete set null,
+  kind text not null,
+  description text not null,
+  total_cents bigint not null,
+  installments int not null default 1,
+  first_due_date date not null,
+  category text,
+  notes text,
+  paid jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists finance_installments_user_idx
+  on public.finance_installments (user_id, first_due_date);
+
+alter table public.finance_installments enable row level security;
+
+create policy "finance_installments own" on public.finance_installments
+  for all to authenticated
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());

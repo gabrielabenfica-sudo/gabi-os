@@ -1,0 +1,442 @@
+-- Gabi OS schema (new project, empty database)
+create table if not exists public.profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  email text,
+  name text,
+  timezone text default 'America/Sao_Paulo',
+  theme text default 'light',
+  app_name text default 'Gabi OS',
+  seeded_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.workspaces (
+  id text primary key,
+  user_id uuid not null default auth.uid(),
+  name text not null,
+  kind text not null,
+  color text,
+  position int not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.task_statuses (
+  id text primary key,
+  user_id uuid not null default auth.uid(),
+  workspace_id text not null,
+  name text not null,
+  position int not null default 0,
+  category text,
+  is_done boolean not null default false
+);
+
+create table if not exists public.labels (
+  id text primary key,
+  user_id uuid not null default auth.uid(),
+  workspace_id text not null,
+  name text not null,
+  color text
+);
+
+create table if not exists public.tasks (
+  id text primary key,
+  user_id uuid not null default auth.uid(),
+  workspace_id text not null,
+  status_id text,
+  title text not null,
+  description text,
+  assignee text,
+  priority text default 'MEDIUM',
+  position int not null default 0,
+  start_date date,
+  due_date date,
+  started_at timestamptz,
+  completed_at timestamptz,
+  rrule text,
+  recurrence_parent_id text,
+  estimate_minutes int,
+  mentee_id text,
+  is_template boolean not null default false,
+  label_ids jsonb not null default '[]'::jsonb,
+  history jsonb not null default '[]'::jsonb,
+  checklist jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.events (
+  id text primary key,
+  user_id uuid not null default auth.uid(),
+  workspace_id text not null,
+  title text not null,
+  description text,
+  start_at timestamptz not null,
+  end_at timestamptz not null,
+  all_day boolean not null default false,
+  timezone text default 'America/Sao_Paulo',
+  location text,
+  priority text default 'MEDIUM',
+  rrule text,
+  reminder_minutes int,
+  notes text,
+  status text default 'NOT_STARTED',
+  transparency text default 'BUSY',
+  task_id text,
+  external_calendar_id text,
+  external_id text,
+  sync_state text default 'LOCAL',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.notes (
+  id text primary key,
+  user_id uuid not null default auth.uid(),
+  workspace_id text not null,
+  title text not null,
+  content jsonb,
+  plain_text text,
+  favorite boolean not null default false,
+  links jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.goals (
+  id text primary key,
+  user_id uuid not null default auth.uid(),
+  workspace_id text not null,
+  type text,
+  title text not null,
+  description text,
+  category text,
+  measure text,
+  direction text,
+  unit text,
+  start_value numeric,
+  target_value numeric,
+  current_value numeric,
+  horizon text,
+  start_date date,
+  due_date date,
+  status text default 'ACTIVE',
+  is_objective boolean not null default false,
+  steps jsonb not null default '[]'::jsonb,
+  progress jsonb not null default '[]'::jsonb,
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.habits (
+  id text primary key,
+  user_id uuid not null default auth.uid(),
+  workspace_id text not null,
+  name text not null,
+  category text,
+  frequency text not null default 'DAILY',
+  days_of_week jsonb not null default '[]'::jsonb,
+  times_per_week int,
+  color text,
+  active boolean not null default true,
+  position int not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.habit_entries (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid(),
+  habit_id text not null,
+  entry_date date not null,
+  done boolean not null default true,
+  created_at timestamptz not null default now(),
+  unique (habit_id, entry_date)
+);
+
+create table if not exists public.accounts (
+  id text primary key,
+  user_id uuid not null default auth.uid(),
+  workspace_id text not null,
+  name text not null,
+  type text,
+  institution text,
+  initial_balance_cents bigint not null default 0,
+  initial_balance_date date,
+  archived boolean not null default false
+);
+
+create table if not exists public.categories (
+  id text primary key,
+  user_id uuid not null default auth.uid(),
+  workspace_id text not null,
+  name text not null,
+  kind text not null,
+  cost_type text
+);
+
+create table if not exists public.compensation (
+  id text primary key,
+  user_id uuid not null default auth.uid(),
+  workspace_id text not null,
+  kind text,
+  reference_month date,
+  description text,
+  expected_cents bigint,
+  received_cents bigint,
+  expected_date date,
+  received_date date,
+  status text default 'EXPECTED',
+  notes text
+);
+
+create table if not exists public.pipeline_stages (
+  id text primary key,
+  user_id uuid not null default auth.uid(),
+  workspace_id text not null,
+  name text not null,
+  position int not null default 0,
+  is_won boolean not null default false,
+  is_lost boolean not null default false
+);
+
+create table if not exists public.content_statuses (
+  id text primary key,
+  user_id uuid not null default auth.uid(),
+  workspace_id text not null,
+  name text not null,
+  position int not null default 0,
+  is_recording_scheduled boolean not null default false,
+  is_scheduled boolean not null default false,
+  is_published boolean not null default false
+);
+
+create table if not exists public.content_items (
+  id text primary key,
+  user_id uuid not null default auth.uid(),
+  workspace_id text not null,
+  profile_id text,
+  status_id text,
+  title text not null,
+  platform text default 'instagram',
+  format text,
+  objective text,
+  audience text,
+  hook text,
+  script text,
+  cta text,
+  owner text,
+  participants text,
+  recording_date timestamptz,
+  publish_date timestamptz,
+  published_at timestamptz,
+  published_url text,
+  notes text,
+  position int not null default 0,
+  metrics jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.content_references (
+  id text primary key,
+  user_id uuid not null default auth.uid(),
+  workspace_id text not null,
+  profile_id text,
+  url text,
+  platform text,
+  creator text,
+  theme text,
+  format text,
+  hook text,
+  notes text,
+  adaptation_ideas text,
+  tags jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.social_profiles (
+  id text primary key,
+  user_id uuid not null default auth.uid(),
+  workspace_id text not null,
+  name text not null,
+  username text,
+  platform text not null default 'instagram',
+  posting_goal_per_week int,
+  audience text,
+  positioning text,
+  objectives text,
+  editorial_line text,
+  archived boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.social_snapshots (
+  id text primary key,
+  user_id uuid not null default auth.uid(),
+  profile_id text not null,
+  snapshot_date date not null,
+  followers int,
+  reach bigint,
+  views bigint,
+  source text default 'MANUAL',
+  fetched_at timestamptz not null default now()
+);
+
+create table if not exists public.maas_areas (
+  id text primary key,
+  user_id uuid not null default auth.uid(),
+  name text not null,
+  position int not null default 0,
+  active boolean not null default true
+);
+
+create table if not exists public.maas_assessments (
+  id text primary key,
+  user_id uuid not null default auth.uid(),
+  assessment_date date not null,
+  notes text,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.maas_scores (
+  id text primary key,
+  user_id uuid not null default auth.uid(),
+  assessment_id text not null,
+  area_id text,
+  area_name text not null,
+  score int,
+  comment text,
+  action_plan text,
+  goal text
+);
+
+create table if not exists public.notification_prefs (
+  user_id uuid primary key default auth.uid(),
+  daily_enabled boolean not null default true,
+  daily_time text default '07:00',
+  weekly_enabled boolean not null default true,
+  weekly_day int default 0,
+  monthly_enabled boolean not null default true,
+  monthly_day int default 1,
+  in_app_enabled boolean not null default true,
+  email_enabled boolean not null default false,
+  bill_due_days_before int default 3
+);
+
+create table if not exists public.routine_blocks (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid(),
+  title text not null,
+  start_time time not null,
+  end_time time not null,
+  days jsonb not null default '[]'::jsonb,
+  workspace_id text,
+  color text,
+  category text,
+  active boolean not null default true,
+  position int not null default 0,
+  notes text,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.routine_logs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid(),
+  block_id uuid not null,
+  log_date date not null,
+  done boolean not null default true,
+  created_at timestamptz not null default now(),
+  unique (block_id, log_date)
+);
+
+create table if not exists public.integrations (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid(),
+  provider text not null,
+  status text not null default 'disconnected',
+  account_label text,
+  last_synced_at timestamptz,
+  scopes text,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, provider)
+);
+
+create table if not exists public.integration_credentials (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null,
+  provider text not null,
+  access_token text,
+  refresh_token text,
+  expires_at timestamptz,
+  metadata jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now(),
+  unique (user_id, provider)
+);
+
+create index if not exists tasks_user_idx on public.tasks(user_id, workspace_id);
+create index if not exists events_user_idx on public.events(user_id, start_at);
+create index if not exists content_items_user_idx on public.content_items(user_id, status_id);
+create index if not exists routine_blocks_user_idx on public.routine_blocks(user_id, position);
+create index if not exists routine_logs_user_idx on public.routine_logs(user_id, log_date);
+create index if not exists habit_entries_user_idx on public.habit_entries(user_id, entry_date);
+
+-- RLS (enabled in the same migration that creates each table)
+alter table public.profiles enable row level security;
+alter table public.workspaces enable row level security;
+alter table public.task_statuses enable row level security;
+alter table public.labels enable row level security;
+alter table public.tasks enable row level security;
+alter table public.events enable row level security;
+alter table public.notes enable row level security;
+alter table public.goals enable row level security;
+alter table public.habits enable row level security;
+alter table public.habit_entries enable row level security;
+alter table public.accounts enable row level security;
+alter table public.categories enable row level security;
+alter table public.compensation enable row level security;
+alter table public.pipeline_stages enable row level security;
+alter table public.content_statuses enable row level security;
+alter table public.content_items enable row level security;
+alter table public.content_references enable row level security;
+alter table public.social_profiles enable row level security;
+alter table public.social_snapshots enable row level security;
+alter table public.maas_areas enable row level security;
+alter table public.maas_assessments enable row level security;
+alter table public.maas_scores enable row level security;
+alter table public.notification_prefs enable row level security;
+alter table public.routine_blocks enable row level security;
+alter table public.routine_logs enable row level security;
+alter table public.integrations enable row level security;
+alter table public.integration_credentials enable row level security;
+
+create policy "profiles self" on public.profiles for all to authenticated using (id = auth.uid()) with check (id = auth.uid());
+
+create policy "workspaces own" on public.workspaces for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "task_statuses own" on public.task_statuses for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "labels own" on public.labels for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "tasks own" on public.tasks for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "events own" on public.events for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "notes own" on public.notes for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "goals own" on public.goals for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "habits own" on public.habits for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "habit_entries own" on public.habit_entries for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "accounts own" on public.accounts for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "categories own" on public.categories for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "compensation own" on public.compensation for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "pipeline_stages own" on public.pipeline_stages for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "content_statuses own" on public.content_statuses for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "content_items own" on public.content_items for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "content_references own" on public.content_references for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "social_profiles own" on public.social_profiles for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "social_snapshots own" on public.social_snapshots for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "maas_areas own" on public.maas_areas for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "maas_assessments own" on public.maas_assessments for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "maas_scores own" on public.maas_scores for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "notification_prefs own" on public.notification_prefs for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "routine_blocks own" on public.routine_blocks for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "routine_logs own" on public.routine_logs for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "integrations own" on public.integrations for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+-- integration_credentials: RLS on, no policies. Only backend functions (service role) touch it.

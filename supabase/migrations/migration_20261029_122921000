@@ -1,0 +1,3 @@
+update public.profiles
+set name = 'Gabriela Benfica'
+where email = 'gabrielabenficamkt@hotmail.com';

@@ -1,0 +1,4 @@
+-- Removing only my verification fixtures from the scratch test account.
+delete from public.social_snapshots where user_id = '01b81f6d-239d-4561-bc30-7c15578a008e';
+delete from public.social_profiles where user_id = '01b81f6d-239d-4561-bc30-7c15578a008e';
+delete from public.finance_transactions where user_id = '01b81f6d-239d-4561-bc30-7c15578a008e';

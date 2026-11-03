@@ -1,0 +1,117 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Warm paper + graphite ink + rose accents, taken from the Gabi OS palette */
+    --background: 30 30% 97%;
+    --foreground: 300 9% 20%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 300 9% 20%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 300 9% 20%;
+
+    --primary: 341 22% 52%;
+    --primary-foreground: 30 40% 98%;
+
+    --secondary: 26 24% 93%;
+    --secondary-foreground: 300 9% 24%;
+
+    --muted: 26 22% 94%;
+    --muted-foreground: 300 5% 45%;
+
+    --accent: 341 32% 94%;
+    --accent-foreground: 341 30% 32%;
+
+    --destructive: 0 62% 48%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 28 18% 88%;
+    --input: 28 18% 86%;
+    --ring: 341 22% 52%;
+
+    --radius: 0.9rem;
+
+    --graphite: 300 9% 20%;
+    --rose: 341 22% 52%;
+    --taupe: 22 12% 69%;
+    --sand: 30 30% 94%;
+
+    --gradient-warm: linear-gradient(140deg, hsl(30 44% 96%) 0%, hsl(341 30% 95%) 55%, hsl(26 24% 93%) 100%);
+    --shadow-soft: 0 18px 40px -24px hsl(300 9% 20% / 0.35);
+    --shadow-card: 0 1px 2px hsl(300 9% 20% / 0.04), 0 12px 30px -22px hsl(300 9% 20% / 0.35);
+
+    --sidebar-background: 30 28% 98%;
+    --sidebar-foreground: 300 8% 30%;
+    --sidebar-primary: 341 22% 52%;
+    --sidebar-primary-foreground: 30 40% 98%;
+    --sidebar-accent: 341 30% 95%;
+    --sidebar-accent-foreground: 341 30% 32%;
+    --sidebar-border: 28 18% 90%;
+    --sidebar-ring: 341 22% 52%;
+
+    --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-display: ui-serif, "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-sans);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
+
+  ::selection {
+    background: hsl(var(--rose) / 0.2);
+  }
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .bg-warm {
+    background: var(--gradient-warm);
+  }
+
+  .shadow-soft {
+    box-shadow: var(--shadow-soft);
+  }
+
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 999px;
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "gabi-os-api",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": { "start": "node index.mjs" },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.0",
+    "@supabase/postgrest-js": "^1.19.4",
+    "jose": "^6.0.0"
+  }
+}
