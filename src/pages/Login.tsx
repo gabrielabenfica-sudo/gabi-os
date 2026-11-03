@@ -7,12 +7,13 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/auth";
 
 export default function Login() {
-  const { session, loading, signIn, resetSession } = useAuth();
+  const { session, loading, signIn, signUp, resetSession } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("gabrielabenficamkt@hotmail.com");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [firstAccess, setFirstAccess] = useState(false);
 
   if (!loading && session) return <Navigate to="/" replace />;
 
@@ -21,11 +22,19 @@ export default function Login() {
     setError(null);
     setBusy(true);
     try {
+      if (firstAccess) {
+        if (password.length < 8) throw new Error("short password");
+        await signUp(email.trim(), password);
+      }
       await signIn(email.trim(), password);
       navigate("/", { replace: true });
     } catch (submitError) {
       const message = (submitError instanceof Error ? submitError.message : "").toLowerCase();
-      if (message.includes("invalid login") || message.includes("invalid credentials")) {
+      if (message === "short password") {
+        setError("A senha precisa ter pelo menos 8 caracteres.");
+      } else if (firstAccess && (message.includes("exist") || message.includes("already"))) {
+        setError("Este e-mail já tem senha criada. Volte e use “Entrar”.");
+      } else if (message.includes("invalid login") || message.includes("invalid credentials")) {
         setError("E-mail ou senha incorretos. Confira a senha temporária e tente de novo.");
       } else if (message.includes("email not confirmed")) {
         setError("Este e-mail ainda não foi confirmado.");
@@ -87,9 +96,13 @@ export default function Login() {
           </div>
 
           <div className="space-y-1">
-            <h2 className="font-display text-2xl text-foreground">Bem-vinda de volta</h2>
+            <h2 className="font-display text-2xl text-foreground">
+              {firstAccess ? "Crie sua senha" : "Bem-vinda de volta"}
+            </h2>
             <p className="text-sm text-muted-foreground">
-              Seu painel, sua rotina e seus projetos estão esperando.
+              {firstAccess
+                ? "Primeiro acesso nesta versão do Gabi OS: escolha uma senha com 8 caracteres ou mais."
+                : "Seu painel, sua rotina e seus projetos estão esperando."}
             </p>
           </div>
 
@@ -112,7 +125,7 @@ export default function Login() {
                 id="password"
                 type="password"
                 required
-                autoComplete="current-password"
+                autoComplete={firstAccess ? "new-password" : "current-password"}
                 placeholder="••••••••"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
@@ -121,7 +134,7 @@ export default function Login() {
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
             <Button type="submit" className="w-full" disabled={busy}>
               {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-              Entrar
+              {firstAccess ? "Criar senha e entrar" : "Entrar"}
               <ArrowRight className="size-4" />
             </Button>
           </form>
@@ -136,7 +149,17 @@ export default function Login() {
             </p>
             <button
               type="button"
-              className="text-[11px] text-primary underline-offset-2 hover:underline"
+              className="block text-[11px] text-primary underline-offset-2 hover:underline"
+              onClick={() => {
+                setFirstAccess((value) => !value);
+                setError(null);
+              }}
+            >
+              {firstAccess ? "Já tenho senha: voltar para entrar" : "Primeiro acesso nesta versão? Criar minha senha"}
+            </button>
+            <button
+              type="button"
+              className="block text-[11px] text-primary underline-offset-2 hover:underline"
               onClick={async () => {
                 await resetSession();
                 window.location.reload();
