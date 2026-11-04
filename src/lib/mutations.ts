@@ -312,3 +312,129 @@ export function useUpdateInstallmentPaid() {
     onSuccess: () => invalidate("finance-installments"),
   });
 }
+
+export function useCreateGoal() {
+  const invalidate = useInvalidator();
+  return useMutation({
+    mutationFn: async (values: Record<string, unknown>) => {
+      const { error } = await supabase.from("goals").insert({ id: crypto.randomUUID(), ...values });
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("goals"),
+  });
+}
+
+export function useDeleteGoal() {
+  const invalidate = useInvalidator();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("goals").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("goals"),
+  });
+}
+
+/** Saves a full life-wheel assessment (one date + a score per area). */
+export function useSaveMaasAssessment() {
+  const invalidate = useInvalidator();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      assessment_date,
+      notes,
+      scores,
+    }: {
+      id?: string;
+      assessment_date: string;
+      notes: string | null;
+      scores: Array<{
+        area_id: string | null;
+        area_name: string;
+        score: number | null;
+        comment: string | null;
+        action_plan: string | null;
+        goal: string | null;
+      }>;
+    }) => {
+      const assessmentId = id ?? crypto.randomUUID();
+      if (id) {
+        const { error } = await supabase.from("maas_assessments").update({ assessment_date, notes }).eq("id", id);
+        if (error) throw error;
+        const { error: delError } = await supabase.from("maas_scores").delete().eq("assessment_id", id);
+        if (delError) throw delError;
+      } else {
+        const { error } = await supabase
+          .from("maas_assessments")
+          .insert({ id: assessmentId, assessment_date, notes });
+        if (error) throw error;
+      }
+      const rows = scores.map((score) => ({ id: crypto.randomUUID(), assessment_id: assessmentId, ...score }));
+      if (rows.length) {
+        const { error } = await supabase.from("maas_scores").insert(rows);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => invalidate("maas-assessments", "maas-scores"),
+  });
+}
+
+export function useDeleteMaasAssessment() {
+  const invalidate = useInvalidator();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error: scoresError } = await supabase.from("maas_scores").delete().eq("assessment_id", id);
+      if (scoresError) throw scoresError;
+      const { error } = await supabase.from("maas_assessments").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("maas-assessments", "maas-scores"),
+  });
+}
+
+export function useUpdateSocialSnapshot() {
+  const invalidate = useInvalidator();
+  return useMutation({
+    mutationFn: async ({ id, values }: { id: string; values: Record<string, unknown> }) => {
+      const { error } = await supabase.from("social_snapshots").update(values).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("social-snapshots"),
+  });
+}
+
+export function useDeleteSocialSnapshot() {
+  const invalidate = useInvalidator();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("social_snapshots").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("social-snapshots"),
+  });
+}
+
+export function useUpdateSocialProfile() {
+  const invalidate = useInvalidator();
+  return useMutation({
+    mutationFn: async ({ id, values }: { id: string; values: Record<string, unknown> }) => {
+      const { error } = await supabase.from("social_profiles").update(values).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("social-profiles"),
+  });
+}
+
+/** Deletes a profile together with all of its number records. */
+export function useDeleteSocialProfile() {
+  const invalidate = useInvalidator();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error: snapError } = await supabase.from("social_snapshots").delete().eq("profile_id", id);
+      if (snapError) throw snapError;
+      const { error } = await supabase.from("social_profiles").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("social-profiles", "social-snapshots"),
+  });
+}

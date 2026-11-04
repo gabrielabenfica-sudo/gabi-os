@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ArrowUpRight, Check, Sparkles, Target, TrendingUp } from "lucide-react";
+import { ArrowUpRight, Check, Pencil, Plus, Sparkles, Target, TrendingUp } from "lucide-react";
+import { GoalFormDialog } from "@/components/goals/goal-form-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -41,6 +42,20 @@ export default function Metas() {
   const saveGoal = useSaveGoal();
   const [dialogGoal, setDialogGoal] = useState<Goal | null>(null);
   const [value, setValue] = useState("");
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<Goal | null>(null);
+  const [formKind, setFormKind] = useState<"NUMBER" | "OBJECTIVE">("NUMBER");
+  const [showDone, setShowDone] = useState(false);
+
+  const openNew = (kind: "NUMBER" | "OBJECTIVE") => {
+    setEditing(null);
+    setFormKind(kind);
+    setFormOpen(true);
+  };
+  const openEdit = (goal: Goal) => {
+    setEditing(goal);
+    setFormOpen(true);
+  };
 
   const active = goals.filter((goal) => goal.status === "ACTIVE");
   const objectives = active.filter((goal) => goal.is_objective);
@@ -83,6 +98,11 @@ export default function Metas() {
         eyebrow="Metas"
         title="O que você está construindo"
         description="Metas financeiras, de desenvolvimento e os objetivos que nasceram da sua roda da vida."
+        actions={
+          <Button size="sm" onClick={() => openNew("NUMBER")}>
+            <Plus className="size-4" /> Nova meta
+          </Button>
+        }
       />
 
       <div className="grid gap-3 sm:grid-cols-3">
@@ -108,7 +128,12 @@ export default function Metas() {
       </div>
 
       <div className="space-y-3">
-        <h2 className="font-display text-lg text-foreground">Metas com número</h2>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="font-display text-lg text-foreground">Metas com número</h2>
+          <Button size="sm" variant="ghost" onClick={() => openNew("NUMBER")}>
+            <Plus className="size-3.5" /> adicionar
+          </Button>
+        </div>
         <div className="grid gap-4 md:grid-cols-2">
           {quantitative.map((goal) => {
             const pct = progressOf(goal);
@@ -123,9 +148,14 @@ export default function Metas() {
                         {goal.category ? ` · ${goal.category}` : ""}
                       </p>
                     </div>
-                    <Badge variant="secondary" className="text-[10px]">
-                      {pct}%
-                    </Badge>
+                    <div className="flex items-center gap-1">
+                      <Badge variant="secondary" className="text-[10px]">
+                        {pct}%
+                      </Badge>
+                      <Button size="icon" variant="ghost" className="size-7" aria-label="Editar meta" onClick={() => openEdit(goal)}>
+                        <Pencil className="size-3.5" />
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -158,7 +188,12 @@ export default function Metas() {
       </div>
 
       <div className="space-y-3">
-        <h2 className="font-display text-lg text-foreground">Objetivos da roda da vida</h2>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="font-display text-lg text-foreground">Objetivos da roda da vida</h2>
+          <Button size="sm" variant="ghost" onClick={() => openNew("OBJECTIVE")}>
+            <Plus className="size-3.5" /> adicionar
+          </Button>
+        </div>
         <div className="grid gap-4 md:grid-cols-2">
           {objectives.map((goal) => {
             const steps = goal.steps ?? [];
@@ -173,7 +208,12 @@ export default function Metas() {
                         {goal.category ?? "Roda da vida"}
                       </p>
                     </div>
-                    <Sparkles className="size-4 text-primary" />
+                    <div className="flex items-center gap-1">
+                      <Sparkles className="size-4 text-primary" />
+                      <Button size="icon" variant="ghost" className="size-7" aria-label="Editar objetivo" onClick={() => openEdit(goal)}>
+                        <Pencil className="size-3.5" />
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -225,6 +265,38 @@ export default function Metas() {
           ) : null}
         </div>
       </div>
+
+      {goals.some((goal) => goal.status !== "ACTIVE") ? (
+        <div className="space-y-3">
+          <Button size="sm" variant="ghost" onClick={() => setShowDone((value) => !value)}>
+            {showDone ? "Esconder" : "Ver"} metas concluídas e pausadas ({goals.filter((goal) => goal.status !== "ACTIVE").length})
+          </Button>
+          {showDone ? (
+            <div className="grid gap-2 md:grid-cols-2">
+              {goals
+                .filter((goal) => goal.status !== "ACTIVE")
+                .map((goal) => (
+                  <Card key={goal.id} className="border-border/60">
+                    <CardContent className="flex items-center justify-between gap-2 p-3">
+                      <div>
+                        <p className="text-sm text-foreground">{goal.title}</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {goal.status === "DONE" ? "Concluída" : "Pausada"}
+                          {goal.category ? ` · ${goal.category}` : ""}
+                        </p>
+                      </div>
+                      <Button size="icon" variant="ghost" className="size-7" aria-label="Editar meta" onClick={() => openEdit(goal)}>
+                        <Pencil className="size-3.5" />
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      <GoalFormDialog open={formOpen} onOpenChange={setFormOpen} goal={editing} defaultKind={formKind} />
 
       <Dialog open={Boolean(dialogGoal)} onOpenChange={(isOpen) => !isOpen && setDialogGoal(null)}>
         <DialogContent className="sm:max-w-sm">

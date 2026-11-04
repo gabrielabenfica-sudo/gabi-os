@@ -207,6 +207,7 @@ export type SocialProfile = {
   posting_goal_per_week: number | null;
   audience: string | null;
   positioning: string | null;
+  archived?: boolean;
 };
 
 export type SocialSnapshot = {
