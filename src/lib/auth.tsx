@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 // Minimal shapes used by the app (Neon's Supabase-compatible auth returns these fields).
@@ -42,12 +43,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const queryClient = useQueryClient();
+
   useEffect(() => {
     let settled = false;
+    let lastToken: string | null = null;
     const finish = (next: Session | null) => {
       settled = true;
       setSession(next);
       setLoading(false);
+      // Data asked for before the sign-in finished loading came back empty:
+      // fetch everything again as soon as a (new) token is available.
+      const token = next?.access_token ?? null;
+      if (token && token !== lastToken) {
+        const firstToken = lastToken === null;
+        lastToken = token;
+        void queryClient.invalidateQueries();
+        // On the very first load the data client can lag a moment behind; check once more.
+        if (firstToken) setTimeout(() => void queryClient.invalidateQueries(), 1500);
+      }
     };
 
     const { data: subscription } = supabase.auth.onAuthStateChange(
@@ -74,7 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
     return () => subscription?.subscription?.unsubscribe?.();
-  }, []);
+  }, [queryClient]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
