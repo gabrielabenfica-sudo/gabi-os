@@ -29,6 +29,21 @@ test("MAAS: avaliação, roda da vida e plano de ação vira objetivo", async ({
   await expect(areas.locator("[data-area]").first()).toHaveAttribute("data-area", "Finanças");
   await expect(areas).toContainText("Meta: Montar reserva de emergência");
 
+  // Atualizar a roda da vida já abre com as últimas notas
+  await page.getByRole("button", { name: "Atualizar roda da vida" }).click();
+  const upd = page.getByRole("dialog");
+  await expect(upd.getByLabel("Nota (número) de Saúde")).toHaveValue("6");
+  await expect(upd.getByLabel("Nota (número) de Finanças")).toHaveValue("4");
+  await expect(upd.getByText("3 de 12 áreas com nota")).toBeVisible();
+  await upd.getByRole("button", { name: "Cancelar" }).click();
+
+  // O Dashboard mostra a roda da vida, com atalho para atualizar
+  await page.goto("/");
+  const wheel = page.getByTestId("dashboard-life-wheel");
+  await expect(wheel).toContainText("Finanças");
+  await expect(wheel).toContainText("4/10");
+  await page.goto("/maas");
+
   await areas.getByRole("button", { name: "Transformar em objetivo" }).click();
   await expect(page).toHaveURL(/\/objetivos\?meta=/);
   const obj = page.getByRole("dialog", { name: "Montar reserva de emergência" });

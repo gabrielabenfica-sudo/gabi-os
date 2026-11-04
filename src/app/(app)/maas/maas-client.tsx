@@ -4,7 +4,7 @@ import * as React from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowUp, ChevronDown, Compass, Pencil, Plus, Settings2, Target, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, Compass, Pencil, Plus, RefreshCw, Settings2, Target, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,31 +22,44 @@ const MaasRadar = dynamic(() => import("./radar").then((m) => m.MaasRadar), { ss
 
 type Overview = Awaited<ReturnType<typeof maasOverview>>;
 type Assessment = Overview["assessments"][number];
+type DialogState = { kind: "form"; edit?: Assessment; prefill?: Assessment } | { kind: "areas" };
 const br = (s: string) => s.split("-").reverse().join("/");
 const ymd = (d: Date | string) => new Date(d).toISOString().slice(0, 10);
 
 export function MaasClient({ overview, today, openNew }: { overview: Overview; today: string; openNew: boolean }) {
   const router = useRouter();
   const confirm = useConfirm();
-  const [dialog, setDialog] = React.useState<{ kind: "form"; edit?: Assessment } | { kind: "areas" } | null>(openNew ? { kind: "form" } : null);
+  const latest = overview.assessments[0];
+  // Atualizar a roda parte das últimas notas; se a última avaliação é de hoje, edita ela mesma
+  const updateForm = React.useCallback(
+    (): DialogState => (!latest ? { kind: "form" } : ymd(latest.date) === today ? { kind: "form", edit: latest } : { kind: "form", prefill: latest }),
+    [latest, today],
+  );
+  const [dialog, setDialog] = React.useState<DialogState | null>(openNew ? updateForm() : null);
   React.useEffect(() => {
-    if (openNew) setDialog({ kind: "form" });
-  }, [openNew]);
+    if (openNew) setDialog(updateForm());
+  }, [openNew, updateForm]);
   const [areaSeries, setAreaSeries] = React.useState(overview.series[0]?.key ?? "");
   const [open, setOpen] = React.useState<string | null>(null);
-  const latest = overview.assessments[0];
   const scoreIdByArea = new Map(latest?.scores.map((s) => [s.areaId ?? `nome:${s.areaName}`, s]) ?? []);
   const selectedSeries = overview.series.find((s) => s.key === areaSeries);
 
   return (
     <div className="grid gap-5">
       <PageHeader
-        title="MAAS"
+        title="Roda da vida (MAAS)"
         description="Mapa de Autoavaliação Sistêmica: dê uma nota de 0 a 10 para cada área da vida e acompanhe a evolução."
         actions={
           <>
             <Button variant="outline" onClick={() => setDialog({ kind: "areas" })}><Settings2 /> Áreas</Button>
-            <Button onClick={() => setDialog({ kind: "form" })}><Plus /> Nova avaliação</Button>
+            {latest ? (
+              <>
+                <Button variant="outline" onClick={() => setDialog({ kind: "form" })}><Plus /> Nova avaliação</Button>
+                <Button onClick={() => setDialog(updateForm())}><RefreshCw /> Atualizar roda da vida</Button>
+              </>
+            ) : (
+              <Button onClick={() => setDialog({ kind: "form" })}><Plus /> Nova avaliação</Button>
+            )}
           </>
         }
       />
@@ -73,9 +86,12 @@ export function MaasClient({ overview, today, openNew }: { overview: Overview; t
 
           <div className="grid gap-5 lg:grid-cols-2">
             <Card>
-              <CardHeader>
-                <CardTitle>Roda da vida</CardTitle>
-                <CardDescription>Última avaliação{overview.previous ? " comparada com a anterior" : ""}.</CardDescription>
+              <CardHeader className="flex-row items-start justify-between gap-2">
+                <div className="grid gap-1.5">
+                  <CardTitle>Roda da vida</CardTitle>
+                  <CardDescription>Última avaliação{overview.previous ? " comparada com a anterior" : ""}.</CardDescription>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => setDialog(updateForm())}><Pencil /> Atualizar</Button>
               </CardHeader>
               <CardContent>
                 <MaasRadar data={overview.comparison.map((c) => ({ area: c.name, atual: c.score, anterior: c.previous }))} hasPrevious={!!overview.previous} />
@@ -205,7 +221,7 @@ export function MaasClient({ overview, today, openNew }: { overview: Overview; t
         </>
       )}
 
-      {dialog?.kind === "form" && <AssessmentDialog areas={overview.areas} edit={dialog.edit} today={today} onClose={() => setDialog(null)} />}
+      {dialog?.kind === "form" && <AssessmentDialog areas={overview.areas} edit={dialog.edit} prefill={dialog.prefill} today={today} onClose={() => setDialog(null)} />}
       {dialog?.kind === "areas" && <AreasDialog areas={overview.areas} onClose={() => setDialog(null)} />}
     </div>
   );
@@ -225,14 +241,15 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
 
 type Row = { areaId: string; name: string; score: number | null; comment: string; goal: string; actionPlan: string };
 
-function AssessmentDialog({ areas, edit, today, onClose }: { areas: Overview["areas"]; edit?: Assessment; today: string; onClose: () => void }) {
+function AssessmentDialog({ areas, edit, prefill, today, onClose }: { areas: Overview["areas"]; edit?: Assessment; prefill?: Assessment; today: string; onClose: () => void }) {
   const router = useRouter();
   const [date, setDate] = React.useState(edit ? ymd(edit.date) : today);
   const [notes, setNotes] = React.useState(edit?.notes ?? "");
   const [rows, setRows] = React.useState<Row[]>(() => {
-    const prev = new Map(edit?.scores.map((s) => [s.areaId, s]) ?? []);
+    const prev = new Map((edit ?? prefill)?.scores.map((s) => [s.areaId, s]) ?? []);
     return areas
-      .filter((a) => a.active || prev.has(a.id))
+      // Ao atualizar a partir da última avaliação, áreas desativadas ficam de fora
+      .filter((a) => a.active || (!!edit && prev.has(a.id)))
       .map((a) => {
         const s = prev.get(a.id);
         return { areaId: a.id, name: a.name, score: s?.score ?? null, comment: s?.comment ?? "", goal: s?.goal ?? "", actionPlan: s?.actionPlan ?? "" };
@@ -247,8 +264,11 @@ function AssessmentDialog({ areas, edit, today, onClose }: { areas: Overview["ar
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[92dvh] max-w-2xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{edit ? "Editar avaliação" : "Nova avaliação"}</DialogTitle>
-          <DialogDescription>Notas de 0 (muito insatisfeita) a 10 (plenamente satisfeita). Áreas sem nota ficam de fora — não contam como zero.</DialogDescription>
+          <DialogTitle>{edit ? "Editar avaliação" : prefill ? "Atualizar roda da vida" : "Nova avaliação"}</DialogTitle>
+          <DialogDescription>
+            {prefill ? `Começa com as notas de ${br(ymd(prefill.date))}; ajuste o que mudou. A avaliação anterior continua no histórico. ` : ""}
+            Notas de 0 (muito insatisfeita) a 10 (plenamente satisfeita). Áreas sem nota ficam de fora — não contam como zero.
+          </DialogDescription>
         </DialogHeader>
         <form
           className="grid gap-4"

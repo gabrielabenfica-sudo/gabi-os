@@ -8,6 +8,7 @@ export const WIDGETS = [
   { id: "habits", label: "Hábitos" },
   { id: "finance", label: "Resumo financeiro" },
   { id: "goals", label: "Metas" },
+  { id: "life-wheel", label: "Roda da vida" },
   { id: "content", label: "Próximas gravações e publicações" },
   { id: "mentoria", label: "Mentoria: encontros e funil" },
   { id: "completion-chart", label: "Tarefas concluídas por dia" },

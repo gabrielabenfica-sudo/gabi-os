@@ -1,3 +1,5 @@
+import { dateToYmd } from "@/lib/dates";
+
 /** Cálculos puros do MAAS (servidor e telas). */
 
 export type MaasPoint = { id: string; date: string; scores: { key: string; name: string; score: number }[] };
@@ -43,4 +45,18 @@ export function maasStats(assessments: MaasPoint[], labels: Map<string, string> 
     averages: assessments.map((a) => ({ date: a.date, average: avg(a.scores.map((s) => s.score))! })),
     series,
   };
+}
+
+type WheelAssessment = { date: Date; scores: { areaId: string | null; areaName: string; score: number }[] };
+
+/** Resumo da última avaliação da roda da vida: média, variação e as áreas com nota mais baixa. */
+export function lifeWheelSummary([latest, previous]: WheelAssessment[]) {
+  if (!latest || !latest.scores.length) return null;
+  const average = avg(latest.scores.map((s) => s.score))!;
+  const prevAverage = previous?.scores.length ? avg(previous.scores.map((s) => s.score))! : null;
+  const lowest = [...latest.scores]
+    .sort((a, b) => a.score - b.score || a.areaName.localeCompare(b.areaName, "pt-BR"))
+    .slice(0, 3)
+    .map((s) => ({ name: s.areaName, score: s.score }));
+  return { date: dateToYmd(latest.date), average, delta: prevAverage === null ? null : Math.round((average - prevAverage) * 10) / 10, areas: latest.scores.length, lowest };
 }

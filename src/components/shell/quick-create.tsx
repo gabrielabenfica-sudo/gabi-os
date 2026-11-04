@@ -18,7 +18,7 @@ export const QUICK_CREATE = [
   { href: "/mentoria/crm?novo=1", label: "Novo lead", icon: UserPlus },
   { href: "/conteudo?novo=1", label: "Novo conteúdo", icon: Clapperboard },
   { href: "/metas?nova=1", label: "Nova meta", icon: Target },
-  { href: "/maas?nova=1", label: "Nova avaliação MAAS", icon: Compass },
+  { href: "/maas?nova=1", label: "Atualizar roda da vida", icon: Compass },
 ];
 
 export function QuickCreateMenu({ compact = false }: { compact?: boolean }) {

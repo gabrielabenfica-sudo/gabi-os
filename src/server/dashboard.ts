@@ -11,6 +11,7 @@ import { upcomingContent } from "@/server/content";
 import { listGoals } from "@/server/goals";
 import { upcomingSessions } from "@/server/mentees";
 import { findModuleWorkspace } from "@/server/workspaces";
+import { lifeWheelSummary } from "@/lib/maas";
 import { addDaysYmd, eachDayYmd, endOfMonthYmd, startOfMonthYmd, startOfWeekYmd, todayYmd, ymdInTz, ymdToDate, zonedToUtc } from "@/lib/dates";
 
 import { WIDGETS } from "@/lib/dashboard-widgets";
@@ -113,11 +114,14 @@ export async function getDashboard(userId: string, tz: string, workspaceFilter: 
 
   // Gestão: próximas gravações/publicações, metas ativas e Mentoria (encontros e funil)
   const twoWeeks = new Date(now.getTime() + 14 * 86_400_000);
-  const [contentNext, goals, mentoriaWs] = await Promise.all([
+  const [contentNext, goals, mentoriaWs, lastAssessments] = await Promise.all([
     upcomingContent(userId, workspaceFilter === "all" ? "all" : [workspaceFilter], now, twoWeeks),
     listGoals(userId, { workspace: workspaceFilter, status: "ACTIVE" }, tz),
     findModuleWorkspace(userId, "MENTORIA", "mentees"),
+    // Roda da vida (MAAS) é pessoal: não depende do ambiente selecionado
+    db.maasAssessment.findMany({ where: { userId }, orderBy: { date: "desc" }, take: 2, include: { scores: { select: { areaId: true, areaName: true, score: true } } } }),
   ]);
+  const lifeWheel = lifeWheelSummary(lastAssessments);
   let mentoria: null | { sessions: Awaited<ReturnType<typeof upcomingSessions>>; overdueLeads: number; openLeads: number; crm: boolean } = null;
   if (mentoriaWs && (workspaceFilter === "all" || workspaceFilter === mentoriaWs.id)) {
     const crmWs = await findModuleWorkspace(userId, "MENTORIA", "crm");
@@ -155,6 +159,7 @@ export async function getDashboard(userId: string, tz: string, workspaceFilter: 
     contentNext,
     goals: goals.slice(0, 6),
     goalsCount: goals.length,
+    lifeWheel,
     mentoria,
     habits: {
       expectedToday: expectedToday.length,
