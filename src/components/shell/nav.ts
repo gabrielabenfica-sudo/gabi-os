@@ -72,7 +72,7 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     title: "Desenvolvimento",
     items: [
-      { href: "/maas", label: "MAAS", icon: Compass, keywords: ["autoavaliação", "roda da vida", "áreas da vida", "mapa"], shortcut: "G V" },
+      { href: "/maas", label: "Roda da vida (MAAS)", icon: Compass, keywords: ["autoavaliação", "roda da vida", "áreas da vida", "mapa"], shortcut: "G V" },
       { href: "/objetivos", label: "Objetivos", icon: Flag, keywords: ["sonhos", "longo prazo", "pessoal", "propósito"] },
       { href: "/revisoes", label: "Revisões", icon: NotebookTabs, keywords: ["semanal", "mensal", "reflexão", "retrospectiva"] },
       { href: "/relatorios", label: "Relatórios", icon: FileBarChart, keywords: ["consolidado", "período", "exportar", "pdf", "csv"], shortcut: "G E" },

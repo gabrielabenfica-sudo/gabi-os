@@ -89,6 +89,7 @@ export function DashboardClient({
     habits: <HabitsCard data={data} />,
     finance: <FinanceCard data={data} />,
     goals: <GoalsCard data={data} />,
+    "life-wheel": <LifeWheelCard data={data} />,
     content: <ContentCard data={data} tz={tz} />,
     mentoria: <MentoriaCard data={data} tz={tz} />,
     "completion-chart": (
@@ -387,7 +388,10 @@ function GoalsCard({ data }: { data: DashboardData }) {
     <Card>
       <CardHeader className="flex-row items-center justify-between">
         <CardTitle>Metas</CardTitle>
-        <Link href="/metas" className="text-xs text-primary hover:underline">{data.goalsCount > data.goals.length ? `Ver todas (${data.goalsCount})` : "Metas"}</Link>
+        <div className="flex items-center gap-3 text-xs">
+          <Link href="/metas?nova=1" className="text-primary hover:underline">Nova meta</Link>
+          <Link href="/metas" className="text-primary hover:underline">{data.goalsCount > data.goals.length ? `Ver todas (${data.goalsCount})` : "Ver metas"}</Link>
+        </div>
       </CardHeader>
       <CardContent>
         {data.goals.length === 0 ? (
@@ -412,6 +416,48 @@ function GoalsCard({ data }: { data: DashboardData }) {
               );
             })}
           </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function LifeWheelCard({ data }: { data: DashboardData }) {
+  const w = data.lifeWheel;
+  return (
+    <Card>
+      <CardHeader className="flex-row items-center justify-between">
+        <CardTitle>Roda da vida</CardTitle>
+        <div className="flex items-center gap-3 text-xs">
+          <Link href="/maas?nova=1" className="text-primary hover:underline">Atualizar</Link>
+          <Link href="/maas" className="text-primary hover:underline">Ver roda</Link>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {!w ? (
+          <p className="text-sm text-muted-foreground">Nenhuma avaliação ainda. <Link href="/maas?nova=1" className="text-primary hover:underline">Dar notas às áreas</Link></p>
+        ) : (
+          <div className="grid gap-3" data-testid="dashboard-life-wheel">
+            <p className="text-sm">
+              <span className="text-lg font-semibold tabular">{w.average.toLocaleString("pt-BR")}</span>
+              <span className="text-muted-foreground"> de média · {w.areas} áreas · {ymdBR(w.date)}</span>
+              {w.delta !== null && w.delta !== 0 && (
+                <span className={cn("ml-2 inline-flex items-center text-xs tabular", w.delta > 0 ? "text-success" : "text-danger")}>
+                  {w.delta > 0 ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />}
+                  {Math.abs(w.delta).toLocaleString("pt-BR")}
+                </span>
+              )}
+            </p>
+            <div className="grid gap-1.5">
+              <p className="text-xs text-muted-foreground">Áreas com nota mais baixa</p>
+              {w.lowest.map((a) => (
+                <div key={a.name} className="flex items-center gap-2 text-sm">
+                  <span className="flex-1 truncate">{a.name}</span>
+                  <span className="w-10 text-right font-medium tabular">{a.score}/10</span>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </CardContent>
     </Card>
