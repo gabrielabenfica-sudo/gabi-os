@@ -315,3 +315,57 @@ export type FinanceInstallment = {
   paid: number[];
   created_at: string;
 };
+
+export type CreditCard = {
+  id: string;
+  scope: string;
+  name: string;
+  bank: string | null;
+  last4: string | null;
+  closing_day: number | null;
+  due_day: number | null;
+  limit_cents: number | null;
+  color: string | null;
+  archived: boolean;
+  created_at: string;
+};
+
+export type CardEntry = {
+  id: string;
+  card_id: string;
+  /** INSTALLMENT: parcelado (amount = valor de cada parcela). RECURRING: todo mês. */
+  kind: "INSTALLMENT" | "RECURRING";
+  description: string;
+  category: string | null;
+  amount_cents: number;
+  installments: number;
+  /** First day of the invoice month where installment 1 (or the recurrence) starts. */
+  first_invoice: string;
+  /** Last invoice month of a recurrence, or null when it has no end. */
+  end_invoice: string | null;
+  notes: string | null;
+  created_at: string;
+};
+
+export type CardInvoice = {
+  id: string;
+  card_id: string;
+  invoice_month: string;
+  paid_at: string | null;
+};
+
+export type Loan = {
+  id: string;
+  scope: string;
+  account_id: string | null;
+  description: string;
+  lender: string | null;
+  principal_cents: number | null;
+  installment_cents: number;
+  installments_total: number;
+  first_due_date: string;
+  interest_rate: string | null;
+  paid: number[];
+  notes: string | null;
+  created_at: string;
+};

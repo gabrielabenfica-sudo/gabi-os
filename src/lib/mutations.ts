@@ -438,3 +438,61 @@ export function useDeleteSocialProfile() {
     onSuccess: () => invalidate("social-profiles", "social-snapshots"),
   });
 }
+
+/* ---------- Cartões de crédito ---------- */
+
+function useTableMutations(table: string, key: string) {
+  const invalidate = useInvalidator();
+  const create = useMutation({
+    mutationFn: async (values: Record<string, unknown>) => {
+      const { error } = await supabase.from(table).insert({ id: crypto.randomUUID(), ...values });
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate(key),
+  });
+  const update = useMutation({
+    mutationFn: async ({ id, values }: { id: string; values: Record<string, unknown> }) => {
+      const { error } = await supabase.from(table).update(values).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate(key),
+  });
+  const remove = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from(table).delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate(key),
+  });
+  return { create, update, remove };
+}
+
+export const useCreditCardMutations = () => useTableMutations("credit_cards", "credit-cards");
+export const useCardEntryMutations = () => useTableMutations("card_entries", "card-entries");
+export const useLoanMutations = () => useTableMutations("loans", "loans");
+
+/** Marks or unmarks a card invoice (card + month) as paid. */
+export function useToggleCardInvoice() {
+  const invalidate = useInvalidator();
+  return useMutation({
+    mutationFn: async ({ cardId, month, paid }: { cardId: string; month: string; paid: boolean }) => {
+      if (paid) {
+        const { error } = await supabase
+          .from("card_invoices")
+          .upsert(
+            { id: `${cardId}_${month}`, card_id: cardId, invoice_month: month, paid_at: new Date().toISOString() },
+            { onConflict: "card_id,invoice_month" },
+          );
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("card_invoices")
+          .delete()
+          .eq("card_id", cardId)
+          .eq("invoice_month", month);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => invalidate("card-invoices"),
+  });
+}

@@ -61,6 +61,11 @@ import { formatCurrency, todayISO } from "@/lib/format";
 import { parseStatement, type ParsedEntry } from "@/lib/statement";
 import { duesForMonth, INSTALLMENT_KINDS, KIND_LABEL, planProgress } from "@/lib/installments";
 import { PageHeader, StatCard } from "@/components/common/page-parts";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CreditCardsSection } from "@/components/finance/credit-cards";
+import { LoansSection } from "@/components/finance/loans";
+import { useCardEntries, useCreditCards, useLoans } from "@/lib/queries";
+import { invoiceLines, loanDueInMonth, monthStart as invoiceMonthStart, sumLines } from "@/lib/credit";
 
 type Scope = "EMPRESA" | "PESSOAL";
 
@@ -84,6 +89,10 @@ export default function Financeiro() {
   const updatePaid = useUpdateInstallmentPaid();
 
   const [scope, setScope] = useState<Scope>("PESSOAL");
+  const [tab, setTab] = useState("geral");
+  const { data: creditCards = [] } = useCreditCards();
+  const { data: cardEntries = [] } = useCardEntries();
+  const { data: loans = [] } = useLoans();
   const [month, setMonth] = useState(new Date());
   const [accountFilter, setAccountFilter] = useState("all");
 
@@ -107,7 +116,7 @@ export default function Financeiro() {
     type: "CHECKING",
   });
   const [planForm, setPlanForm] = useState({
-    kind: "CREDIT_CARD",
+    kind: "CHECK",
     description: "",
     total: "",
     installments: "1",
@@ -165,8 +174,19 @@ export default function Financeiro() {
 
   const monthKey = format(month, "yyyy-MM");
   const monthDues = duesForMonth(scopePlans, monthKey);
-  const dueTotal = monthDues.reduce((sum, due) => sum + due.amountCents, 0);
-  const duePaid = monthDues.filter((due) => due.paid).reduce((sum, due) => sum + due.amountCents, 0);
+  const scopeCardIds = new Set(creditCards.filter((card) => card.scope === scope && !card.archived).map((card) => card.id));
+  const cardInvoiceTotal = sumLines(
+    invoiceLines(cardEntries.filter((entry) => scopeCardIds.has(entry.card_id)), invoiceMonthStart(month)),
+  );
+  const loanMonth = loans
+    .filter((loan) => loan.scope === scope)
+    .map((loan) => ({ loan, due: loanDueInMonth(loan, monthKey) }))
+    .filter((item) => item.due);
+  const loanMonthTotal = loanMonth.reduce((sum, item) => sum + item.loan.installment_cents, 0);
+  const loanMonthPaid = loanMonth.filter((item) => item.due?.paid).reduce((sum, item) => sum + item.loan.installment_cents, 0);
+  const dueTotal = monthDues.reduce((sum, due) => sum + due.amountCents, 0) + cardInvoiceTotal + loanMonthTotal;
+  const duePaid =
+    monthDues.filter((due) => due.paid).reduce((sum, due) => sum + due.amountCents, 0) + loanMonthPaid;
 
   const balanceFor = (accountId: string, initial: number) =>
     initial +
@@ -278,7 +298,7 @@ export default function Financeiro() {
 
   const openPlan = () => {
     setPlanForm({
-      kind: "CREDIT_CARD",
+      kind: "CHECK",
       description: "",
       total: "",
       installments: "1",
@@ -420,6 +440,14 @@ export default function Financeiro() {
         </div>
       </div>
 
+      <Tabs value={tab} onValueChange={setTab} className="space-y-5">
+        <TabsList>
+          <TabsTrigger value="geral">Visão geral</TabsTrigger>
+          <TabsTrigger value="cartoes">Cartões de crédito</TabsTrigger>
+          <TabsTrigger value="emprestimos">Empréstimos</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="geral" className="mt-0 space-y-7">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Entradas do mês"
@@ -437,7 +465,7 @@ export default function Financeiro() {
         <StatCard
           label="A pagar no mês"
           value={formatCurrency(dueTotal)}
-          hint={`${formatCurrency(duePaid)} já pago em parcelas`}
+          hint={`faturas ${formatCurrency(cardInvoiceTotal)} · empréstimos ${formatCurrency(loanMonthTotal)}`}
           icon={<CreditCard className="size-4" />}
         />
         <StatCard
@@ -536,7 +564,7 @@ export default function Financeiro() {
               <div>
                 <CardTitle className="font-display text-lg">Parcelamentos</CardTitle>
                 <p className="text-[11px] text-muted-foreground">
-                  cartão · cheque · empréstimo · notinhas
+                  cheque · notinhas · outros (cartões e empréstimos têm abas próprias)
                 </p>
               </div>
               <Button size="sm" variant="outline" onClick={openPlan}>
@@ -699,6 +727,16 @@ export default function Financeiro() {
           ) : null}
         </div>
       </div>
+        </TabsContent>
+
+        <TabsContent value="cartoes" className="mt-0">
+          <CreditCardsSection scope={scope} month={month} />
+        </TabsContent>
+
+        <TabsContent value="emprestimos" className="mt-0">
+          <LoansSection scope={scope} month={month} accounts={scopeAccounts} onAddAccount={() => setAccountOpen(true)} />
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={entryOpen} onOpenChange={setEntryOpen}>
         <DialogContent className="sm:max-w-md">
@@ -884,7 +922,7 @@ export default function Financeiro() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {INSTALLMENT_KINDS.map((kind) => (
+                  {INSTALLMENT_KINDS.filter((kind) => kind.value !== "CREDIT_CARD" && kind.value !== "LOAN").map((kind) => (
                     <SelectItem key={kind.value} value={kind.value}>
                       {kind.label}
                     </SelectItem>

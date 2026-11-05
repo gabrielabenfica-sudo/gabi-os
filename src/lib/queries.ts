@@ -1,6 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase, invokeFunction } from "@/integrations/supabase/client";
 import type {
+  CreditCard,
+  CardEntry,
+  CardInvoice,
+  Loan,
   Account,
   CalendarEvent,
   Category,
@@ -55,6 +59,10 @@ const TABLE_KEYS = {
   maasAreas: ["maas-areas"],
   maasAssessments: ["maas-assessments"],
   maasScores: ["maas-scores"],
+  creditCards: ["credit-cards"],
+  cardEntries: ["card-entries"],
+  cardInvoices: ["card-invoices"],
+  loans: ["loans"],
   routineBlocks: ["routine-blocks"],
   routineLogs: ["routine-logs"],
   profile: ["profile"],
@@ -134,6 +142,12 @@ export const useMaasAssessments = () =>
     ascending: false,
   });
 export const useMaasScores = () => useTable<MaasScore>("maas_scores", TABLE_KEYS.maasScores);
+export const useCreditCards = () =>
+  useTable<CreditCard>("credit_cards", TABLE_KEYS.creditCards, { column: "created_at" });
+export const useCardEntries = () =>
+  useTable<CardEntry>("card_entries", TABLE_KEYS.cardEntries, { column: "first_invoice" });
+export const useCardInvoices = () => useTable<CardInvoice>("card_invoices", TABLE_KEYS.cardInvoices);
+export const useLoans = () => useTable<Loan>("loans", TABLE_KEYS.loans, { column: "first_due_date" });
 export const useRoutineBlocks = () =>
   useTable<RoutineBlock>("routine_blocks", TABLE_KEYS.routineBlocks, { column: "start_time" });
 export const useRoutineLogs = () =>
