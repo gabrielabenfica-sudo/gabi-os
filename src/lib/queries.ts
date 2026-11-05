@@ -5,6 +5,8 @@ import type {
   CardEntry,
   CardInvoice,
   Loan,
+  Receivable,
+  ReceivablePayment,
   Account,
   CalendarEvent,
   Category,
@@ -63,6 +65,8 @@ const TABLE_KEYS = {
   cardEntries: ["card-entries"],
   cardInvoices: ["card-invoices"],
   loans: ["loans"],
+  receivables: ["receivables"],
+  receivablePayments: ["receivable-payments"],
   routineBlocks: ["routine-blocks"],
   routineLogs: ["routine-logs"],
   profile: ["profile"],
@@ -148,6 +152,10 @@ export const useCardEntries = () =>
   useTable<CardEntry>("card_entries", TABLE_KEYS.cardEntries, { column: "first_invoice" });
 export const useCardInvoices = () => useTable<CardInvoice>("card_invoices", TABLE_KEYS.cardInvoices);
 export const useLoans = () => useTable<Loan>("loans", TABLE_KEYS.loans, { column: "first_due_date" });
+export const useReceivables = () =>
+  useTable<Receivable>("receivables", TABLE_KEYS.receivables, { column: "created_at" });
+export const useReceivablePayments = () =>
+  useTable<ReceivablePayment>("receivable_payments", TABLE_KEYS.receivablePayments, { column: "month" });
 export const useRoutineBlocks = () =>
   useTable<RoutineBlock>("routine_blocks", TABLE_KEYS.routineBlocks, { column: "start_time" });
 export const useRoutineLogs = () =>

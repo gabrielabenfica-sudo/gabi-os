@@ -369,3 +369,29 @@ export type Loan = {
   notes: string | null;
   created_at: string;
 };
+
+export type Receivable = {
+  id: string;
+  scope: string;
+  person: string;
+  description: string | null;
+  amount_cents: number;
+  due_day: number | null;
+  /** First month (yyyy-MM-01) the person owes. */
+  start_month: string;
+  /** Last month owed, or null when it has no end. */
+  end_month: string | null;
+  account_id: string | null;
+  active: boolean;
+  notes: string | null;
+  created_at: string;
+};
+
+export type ReceivablePayment = {
+  id: string;
+  receivable_id: string;
+  month: string;
+  amount_cents: number;
+  received_on: string;
+  transaction_id: string | null;
+};

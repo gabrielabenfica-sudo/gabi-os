@@ -496,3 +496,75 @@ export function useToggleCardInvoice() {
     onSuccess: () => invalidate("card-invoices"),
   });
 }
+
+/* ---------- A receber ---------- */
+
+export const useReceivableMutations = () => useTableMutations("receivables", "receivables");
+
+/**
+ * Marks one month of a receivable as received. Optionally records the money as an
+ * income entry in the chosen account, and links it so unmarking removes it too.
+ */
+export function useMarkReceived() {
+  const invalidate = useInvalidator();
+  return useMutation({
+    mutationFn: async ({
+      receivableId,
+      month,
+      amountCents,
+      receivedOn,
+      income,
+    }: {
+      receivableId: string;
+      month: string;
+      amountCents: number;
+      receivedOn: string;
+      income: null | { scope: string; description: string; account_id: string | null };
+    }) => {
+      let transactionId: string | null = null;
+      if (income) {
+        transactionId = crypto.randomUUID();
+        const { error } = await supabase.from("finance_transactions").insert({
+          id: transactionId,
+          scope: income.scope,
+          kind: "INCOME",
+          description: income.description,
+          amount_cents: amountCents,
+          occurred_on: receivedOn,
+          category: "A receber",
+          account_id: income.account_id,
+          source: "RECEIVABLE",
+        });
+        if (error) throw error;
+      }
+      const { error } = await supabase.from("receivable_payments").upsert(
+        {
+          id: `${receivableId}_${month}`,
+          receivable_id: receivableId,
+          month,
+          amount_cents: amountCents,
+          received_on: receivedOn,
+          transaction_id: transactionId,
+        },
+        { onConflict: "receivable_id,month" },
+      );
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("receivable-payments", "finance-transactions"),
+  });
+}
+
+export function useUnmarkReceived() {
+  const invalidate = useInvalidator();
+  return useMutation({
+    mutationFn: async ({ paymentId, transactionId }: { paymentId: string; transactionId: string | null }) => {
+      if (transactionId) {
+        const { error } = await supabase.from("finance_transactions").delete().eq("id", transactionId);
+        if (error) throw error;
+      }
+      const { error } = await supabase.from("receivable_payments").delete().eq("id", paymentId);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("receivable-payments", "finance-transactions"),
+  });
+}

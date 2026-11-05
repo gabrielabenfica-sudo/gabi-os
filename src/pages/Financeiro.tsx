@@ -64,6 +64,7 @@ import { PageHeader, StatCard } from "@/components/common/page-parts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CreditCardsSection } from "@/components/finance/credit-cards";
 import { LoansSection } from "@/components/finance/loans";
+import { ReceivablesSection } from "@/components/finance/receivables";
 import { useCardEntries, useCreditCards, useLoans } from "@/lib/queries";
 import { invoiceLines, loanDueInMonth, monthStart as invoiceMonthStart, sumLines } from "@/lib/credit";
 
@@ -441,10 +442,11 @@ export default function Financeiro() {
       </div>
 
       <Tabs value={tab} onValueChange={setTab} className="space-y-5">
-        <TabsList>
+        <TabsList className="h-auto flex-wrap">
           <TabsTrigger value="geral">Visão geral</TabsTrigger>
           <TabsTrigger value="cartoes">Cartões de crédito</TabsTrigger>
           <TabsTrigger value="emprestimos">Empréstimos</TabsTrigger>
+          <TabsTrigger value="receber">A receber</TabsTrigger>
         </TabsList>
 
         <TabsContent value="geral" className="mt-0 space-y-7">
@@ -735,6 +737,10 @@ export default function Financeiro() {
 
         <TabsContent value="emprestimos" className="mt-0">
           <LoansSection scope={scope} month={month} accounts={scopeAccounts} onAddAccount={() => setAccountOpen(true)} />
+        </TabsContent>
+
+        <TabsContent value="receber" className="mt-0">
+          <ReceivablesSection scope={scope} month={month} accounts={scopeAccounts} />
         </TabsContent>
       </Tabs>
 
