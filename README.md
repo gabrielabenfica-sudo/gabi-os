@@ -25,3 +25,9 @@ Servidor:
 - `APP_ORIGIN` — URL do app
 - `ANTHROPIC_API_KEY` — chave da Anthropic para o assistente (opcional)
 - `SEED_DISABLED` — `true` para nunca carregar os dados iniciais
+
+## Ao criar tabelas ou colunas novas
+
+A Data API do Neon guarda uma lista das tabelas. Depois de qualquer mudança no esquema,
+atualize essa lista (Console do Neon > Data API > "Refresh schema cache", ou reaplicando a
+configuração da Data API). Sem isso, o app recebe erro 404 ao salvar na tabela nova.
