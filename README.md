@@ -41,7 +41,7 @@ A aba **Tarefas** da planilha alimenta o quadro de Tarefas do **Trabalho TURBO**
   15 minutos. O cabeçalho `x-sync-token` precisa bater com `SHEET_SYNC_TOKEN` no servidor
   (o token não fica no repositório).
 - Entram só linhas com “Tarefa” preenchida e Proprietário = Gabriela (ou vazio).
-- Mapeamento: Prioridade → prioridade; Status Pendente → A fazer, Respondido → Em revisão,
+- Mapeamento: Prioridade A → alta, B → média, C → baixa; Status Pendente → A fazer, Respondido → Em revisão,
   Resolvido → Concluído; Data gravação → início; Data postagem → prazo; Fase, Produtos e
   Observações → descrição.
 - Só o que muda **na planilha** é aplicado de novo. O que você muda no app (ex.: arrastar o

@@ -8,10 +8,16 @@ test("prioridade e status", () => {
   assert.equal(mapPriority("URGENTE"), "URGENT");
   assert.equal(mapPriority("baixa"), "LOW");
   assert.equal(mapPriority(""), "MEDIUM");
+  assert.equal(mapPriority("A"), "HIGH");
+  assert.equal(mapPriority("b"), "MEDIUM");
+  assert.equal(mapPriority("C"), "LOW");
   assert.equal(mapStatus("Pendente"), "TODO");
   assert.equal(mapStatus("Respondido"), "REVIEW");
   assert.equal(mapStatus("Resolvido"), "DONE");
   assert.equal(mapStatus(""), "TODO");
+  assert.equal(mapStatus("Não iniciada"), "TODO");
+  assert.equal(mapStatus("Em andamento"), "IN_PROGRESS");
+  assert.equal(mapStatus("Concluída"), "DONE");
 });
 
 test("datas", () => {
@@ -30,6 +36,8 @@ test("só linhas da Gabriela", () => {
   assert.equal(isMine({ "Proprietário": " gabriela " }), true);
   assert.equal(isMine({ "Proprietário": "" }), true);
   assert.equal(isMine({ "Proprietário": "Noemi" }), false);
+  assert.equal(isMine({ "Proprietário": "Gabriela Benfica" }), true);
+  assert.equal(isMine({ "Proprietário": "Kayke Eduardo Nunes Macedo" }), false);
 });
 
 test("linha vira tarefa", () => {

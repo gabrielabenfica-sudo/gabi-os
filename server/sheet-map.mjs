@@ -17,6 +17,10 @@ const clean = (v) => {
 /** "Alta", "média", "URGENTE"… → código usado no app. Vazio ou desconhecido → MEDIUM. */
 export function mapPriority(v) {
   const p = norm(v);
+  // Escala por letra usada na planilha: A = alta, B = média, C = baixa
+  if (p === "a") return "HIGH";
+  if (p === "b") return "MEDIUM";
+  if (p === "c") return "LOW";
   if (p.startsWith("urg")) return "URGENT";
   if (p.startsWith("alt") || p === "high") return "HIGH";
   if (p.startsWith("baix") || p === "low") return "LOW";
@@ -28,7 +32,7 @@ export function mapStatus(v) {
   const s = norm(v);
   if (s.startsWith("resolv") || s.startsWith("conclu") || s === "feito") return "DONE";
   if (s.startsWith("respond")) return "REVIEW";
-  if (s.startsWith("andamento") || s.startsWith("em andamento") || s.startsWith("fazendo")) return "IN_PROGRESS";
+  if (s.includes("andamento") || s.startsWith("fazendo") || s.startsWith("iniciad")) return "IN_PROGRESS";
   return "TODO";
 }
 
