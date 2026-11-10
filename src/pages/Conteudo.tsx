@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ExternalLink, Instagram, Play, Plus, Send } from "lucide-react";
+import { ExternalLink, Instagram, Play, Plus, Send, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -32,7 +32,9 @@ import {
   useContentStatuses,
   useSocialProfiles,
 } from "@/lib/queries";
-import { useCreateContentItem, useSaveContentItem } from "@/lib/mutations";
+import { useCreateContentItem, useDeleteContentItem, useMoveCards, useSaveContentItem } from "@/lib/mutations";
+import { dropPositions, topPosition } from "@/lib/kanban";
+import { CardMenu, ConfirmDelete, DropColumn, draggableCard } from "@/components/common/kanban";
 import { toast } from "sonner";
 import { PageHeader, StatCard } from "@/components/common/page-parts";
 import type { ContentItem } from "@/lib/types";
@@ -53,6 +55,9 @@ export default function Conteudo() {
   const { data: references = [] } = useContentReferences();
   const saveItem = useSaveContentItem();
   const createItem = useCreateContentItem();
+  const deleteItem = useDeleteContentItem();
+  const moveCards = useMoveCards("content_items", "content-items");
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const emptyNew = { title: "", format: "REELS", profile_id: "", status_id: "", owner: "", hook: "", script: "", cta: "", publish_date: "" };
   const [creating, setCreating] = useState(false);
@@ -114,7 +119,7 @@ export default function Conteudo() {
         script: newItem.script || null,
         cta: newItem.cta || null,
         publish_date: newItem.publish_date ? new Date(`${newItem.publish_date}:00-03:00`).toISOString() : null,
-        position: workspaceItems.length,
+        position: topPosition(columnOf(newItem.status_id || null)),
       },
       {
         onSuccess: () => {
@@ -126,6 +131,35 @@ export default function Conteudo() {
     );
   };
 
+  const columnOf = (statusId: string | null) =>
+    workspaceItems.filter((item) => item.status_id === statusId).sort((a, b) => b.position - a.position);
+
+  /** Solta o conteúdo na etapa `statusId`, na posição `index` (0 = topo). */
+  const moveItem = (itemId: string, statusId: string, index = 0) => {
+    const item = workspaceItems.find((entry) => entry.id === itemId);
+    if (!item) return;
+    const positions = dropPositions(columnOf(statusId), itemId, index, item);
+    const updates = positions.map((entry) => ({ id: entry.id, values: { position: entry.position } as Record<string, unknown> }));
+    if (statusId !== item.status_id) {
+      const moved = updates.find((entry) => entry.id === itemId);
+      if (moved) moved.values.status_id = statusId;
+    } else if (updates.length === 1 && updates[0].values.position === item.position) {
+      return;
+    }
+    moveCards.mutate(updates, {
+      onError: (error) => toast.error(`Não foi possível mover o conteúdo. ${error instanceof Error ? error.message : ""}`),
+    });
+  };
+
+  const removeItem = (id: string) =>
+    deleteItem.mutate(id, {
+      onSuccess: () => {
+        setSelected(null);
+        toast.success("Conteúdo excluído.");
+      },
+      onError: (error) => toast.error(`Não foi possível excluir. ${error instanceof Error ? error.message : ""}`),
+    });
+
   const published = workspaceItems.filter((item) => item.published_at);
   const scheduled = workspaceItems.filter((item) => !item.published_at && item.publish_date);
 
@@ -134,7 +168,7 @@ export default function Conteudo() {
       <PageHeader
         eyebrow="Conteúdo"
         title="Do roteiro ao publicado"
-        description="Seus conteúdos com gancho, roteiro e CTA, organizados pela etapa de produção."
+        description="Seus conteúdos com gancho, roteiro e CTA. Arraste os cards entre as etapas (ou use o menu ⋯) e exclua o que não serve mais."
         actions={
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="h-8 gap-1 px-3 text-xs">
@@ -167,7 +201,7 @@ export default function Conteudo() {
           ) : null}
           <div className="flex gap-3 overflow-x-auto pb-3 scrollbar-thin">
             {workspaceStatuses.map((status) => {
-              const columnItems = workspaceItems.filter((item) => item.status_id === status.id);
+              const columnItems = columnOf(status.id);
               return (
                 <div key={status.id} className="flex w-[268px] shrink-0 flex-col gap-2">
                   <div className="flex items-center justify-between px-1">
@@ -178,14 +212,29 @@ export default function Conteudo() {
                       {columnItems.length}
                     </span>
                   </div>
-                  <div className="min-h-[100px] space-y-2 rounded-2xl border border-border/50 bg-secondary/25 p-2">
+                  <DropColumn
+                    columnId={status.id}
+                    onDropCard={moveItem}
+                    className="min-h-[100px] space-y-2 rounded-2xl border border-border/50 bg-secondary/25 p-2"
+                  >
                     {columnItems.map((item) => (
                       <Card
                         key={item.id}
-                        className="cursor-pointer border-border/70 p-3 shadow-sm transition hover:border-primary/40"
+                        {...draggableCard(item.id)}
+                        className="cursor-grab border-border/70 p-3 shadow-sm transition hover:border-primary/40 active:cursor-grabbing"
                         onClick={() => openItem(item)}
                       >
-                        <p className="text-sm leading-snug text-foreground">{item.title}</p>
+                        <div className="flex items-start gap-2">
+                          <p className="flex-1 text-sm leading-snug text-foreground">{item.title}</p>
+                          <CardMenu
+                            title={item.title}
+                            columns={workspaceStatuses}
+                            currentColumnId={item.status_id}
+                            onMove={(statusId) => moveItem(item.id, statusId, 0)}
+                            onDelete={() => removeItem(item.id)}
+                            deleteDescription="O conteúdo, com gancho, roteiro e CTA, será apagado. Essa ação não pode ser desfeita."
+                          />
+                        </div>
                         <div className="mt-2 flex flex-wrap items-center gap-1.5">
                           <Badge variant="secondary" className="text-[10px]">
                             {FORMAT_LABEL[item.format ?? "OTHER"] ?? item.format}
@@ -216,7 +265,7 @@ export default function Conteudo() {
                     >
                       <Plus className="size-3" /> adicionar
                     </button>
-                  </div>
+                  </DropColumn>
                 </div>
               );
             })}
@@ -369,13 +418,23 @@ export default function Conteudo() {
             ) : null}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:justify-between">
+            <Button type="button" variant="ghost" className="text-destructive" onClick={() => setConfirmDelete(true)}>
+              <Trash2 className="size-4" /> Excluir
+            </Button>
             <Button type="button" onClick={submit} disabled={saveItem.isPending}>
               Salvar conteúdo
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmDelete
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={selected?.title ?? "conteúdo"}
+        description="O conteúdo, com gancho, roteiro e CTA, será apagado. Essa ação não pode ser desfeita."
+        onConfirm={() => selected && removeItem(selected.id)}
+      />
       <Dialog open={creating} onOpenChange={setCreating}>
         <DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-xl">
           <DialogHeader>

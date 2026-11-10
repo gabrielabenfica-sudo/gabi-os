@@ -24,7 +24,10 @@ import {
 import { cn } from "@/lib/utils";
 import { useWorkspace } from "@/lib/workspace";
 import { useTaskLabels, useTaskStatuses, useTasks } from "@/lib/queries";
-import { useCreateTask, useDeleteTask, useSaveTask } from "@/lib/mutations";
+import { useCreateTask, useDeleteTask, useMoveCards, useSaveTask } from "@/lib/mutations";
+import { dropPositions, topPosition } from "@/lib/kanban";
+import { CardMenu, ConfirmDelete, DropColumn, draggableCard } from "@/components/common/kanban";
+import { toast } from "sonner";
 import { formatShortDate, PRIORITY_META, rruleLabel } from "@/lib/format";
 import { PageHeader, WorkspaceDot } from "@/components/common/page-parts";
 import type { Task } from "@/lib/types";
@@ -47,6 +50,8 @@ export default function Tarefas() {
   const createTask = useCreateTask();
   const saveTask = useSaveTask();
   const deleteTask = useDeleteTask();
+  const moveCards = useMoveCards("tasks", "tasks");
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<TaskForm | null>(null);
@@ -96,18 +101,69 @@ export default function Tarefas() {
       status_id: form.status_id || null,
       priority: form.priority,
       due_date: form.due_date || null,
-      start_date: form.due_date || null,
       estimate_minutes: form.estimate_minutes ? Number(form.estimate_minutes) : null,
       workspace_id: workspace.id,
-      position: Date.now(),
       completed_at: form.status_id === doneStatus?.id ? new Date().toISOString() : null,
     };
+    const onError = (error: unknown) =>
+      toast.error(`Não foi possível salvar a tarefa. ${error instanceof Error ? error.message : ""}`);
     if (form.id) {
-      saveTask.mutate({ id: form.id, values }, { onSuccess: () => setOpen(false) });
+      const current = workspaceTasks.find((task) => task.id === form.id);
+      saveTask.mutate(
+        {
+          id: form.id,
+          // Mantém a data de início que já existia (ex.: data de gravação vinda da planilha)
+          values: { ...values, start_date: current?.start_date ?? (form.due_date || null) },
+        },
+        { onSuccess: () => setOpen(false), onError },
+      );
     } else {
-      createTask.mutate(values, { onSuccess: () => setOpen(false) });
+      createTask.mutate(
+        { ...values, start_date: form.due_date || null, position: topPosition(columnOf(form.status_id)) },
+        { onSuccess: () => setOpen(false), onError },
+      );
     }
   };
+
+  const columnOf = (statusId: string | null) =>
+    workspaceTasks.filter((task) => task.status_id === statusId).sort((a, b) => b.position - a.position);
+
+  /** Solta a tarefa na coluna `statusId`, na posição `index` (0 = topo). */
+  const moveTask = (taskId: string, statusId: string, index = 0) => {
+    const task = workspaceTasks.find((item) => item.id === taskId);
+    if (!task) return;
+    const positions = dropPositions(columnOf(statusId), taskId, index, task);
+    const updates = positions.map((item) => ({ id: item.id, values: { position: item.position } as Record<string, unknown> }));
+    if (statusId !== task.status_id) {
+      const target = workspaceStatuses.find((status) => status.id === statusId);
+      const from = workspaceStatuses.find((status) => status.id === task.status_id);
+      const moved = updates.find((item) => item.id === taskId);
+      if (moved) {
+        Object.assign(moved.values, {
+          status_id: statusId,
+          completed_at: target?.is_done ? task.completed_at ?? new Date().toISOString() : null,
+          history: [
+            ...(task.history ?? []),
+            { field: "status", from: from?.name ?? null, to: target?.name ?? null, at: new Date().toISOString() },
+          ],
+        });
+      }
+    } else if (updates.length === 1 && updates[0].values.position === task.position) {
+      return; // soltou no mesmo lugar
+    }
+    moveCards.mutate(updates, {
+      onError: (error) => toast.error(`Não foi possível mover a tarefa. ${error instanceof Error ? error.message : ""}`),
+    });
+  };
+
+  const removeTask = (id: string) =>
+    deleteTask.mutate(id, {
+      onSuccess: () => {
+        setOpen(false);
+        toast.success("Tarefa excluída.");
+      },
+      onError: (error) => toast.error(`Não foi possível excluir. ${error instanceof Error ? error.message : ""}`),
+    });
 
   const toggleDone = (task: Task) => {
     const done = workspaceStatuses.find((status) => status.is_done);
@@ -126,7 +182,7 @@ export default function Tarefas() {
       <PageHeader
         eyebrow="Tarefas"
         title={workspace ? `${workspace.name}` : "Tarefas"}
-        description="Cada área tem seu próprio fluxo. Arraste o card, edite e mantenha o que importa andando."
+        description="Cada área tem seu próprio fluxo. Arraste os cards entre as colunas (ou use o menu ⋯ do card), edite e exclua."
         actions={
           <Button onClick={openNew}>
             <Plus className="size-4" /> Nova tarefa
@@ -156,7 +212,11 @@ export default function Tarefas() {
                   {status.is_done ? <CheckCircle2 className="size-3.5 text-primary" /> : null}
                 </div>
 
-                <div className="min-h-[120px] space-y-2 rounded-2xl border border-border/50 bg-secondary/25 p-2">
+                <DropColumn
+                  columnId={status.id}
+                  onDropCard={moveTask}
+                  className="min-h-[120px] space-y-2 rounded-2xl border border-border/50 bg-secondary/25 p-2"
+                >
                   {columnTasks.map((task) => {
                     const priority = PRIORITY_META[task.priority ?? "MEDIUM"] ?? PRIORITY_META.MEDIUM;
                     const taskLabels = workspaceLabels.filter((label) =>
@@ -165,7 +225,8 @@ export default function Tarefas() {
                     return (
                       <Card
                         key={task.id}
-                        className="cursor-pointer border-border/70 p-3 shadow-sm transition hover:border-primary/40 hover:shadow-card"
+                        {...draggableCard(task.id)}
+                        className="cursor-grab border-border/70 p-3 shadow-sm transition hover:border-primary/40 hover:shadow-card active:cursor-grabbing"
                         onClick={() => openEdit(task)}
                       >
                         <div className="flex items-start gap-2">
@@ -192,6 +253,13 @@ export default function Tarefas() {
                           >
                             {task.title}
                           </p>
+                          <CardMenu
+                            title={task.title}
+                            columns={workspaceStatuses}
+                            currentColumnId={task.status_id}
+                            onMove={(statusId) => moveTask(task.id, statusId, 0)}
+                            onDelete={() => removeTask(task.id)}
+                          />
                         </div>
 
                         {taskLabels.length ? (
@@ -236,9 +304,9 @@ export default function Tarefas() {
                     );
                   })}
                   {columnTasks.length === 0 ? (
-                    <p className="px-2 py-6 text-center text-[11px] text-muted-foreground">vazio</p>
+                    <p className="px-2 py-6 text-center text-[11px] text-muted-foreground">solte aqui</p>
                   ) : null}
-                </div>
+                </DropColumn>
               </div>
             );
           })}
@@ -356,7 +424,7 @@ export default function Tarefas() {
                 type="button"
                 variant="ghost"
                 className="text-destructive"
-                onClick={() => deleteTask.mutate(form.id!, { onSuccess: () => setOpen(false) })}
+                onClick={() => setConfirmDelete(true)}
               >
                 <Trash2 className="size-4" /> Excluir
               </Button>
@@ -369,6 +437,12 @@ export default function Tarefas() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmDelete
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={form?.title || "tarefa"}
+        onConfirm={() => form?.id && removeTask(form.id)}
+      />
     </div>
   );
 }

@@ -568,3 +568,48 @@ export function useUnmarkReceived() {
     onSuccess: () => invalidate("receivable-payments", "finance-transactions"),
   });
 }
+
+/**
+ * Move cards no quadro (tarefas ou conteúdo): grava coluna/posição e já mostra o resultado
+ * na tela antes da resposta do banco; se falhar, volta como estava.
+ */
+export function useMoveCards(table: "tasks" | "content_items", key: "tasks" | "content-items") {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (updates: Array<{ id: string; values: Record<string, unknown> }>) => {
+      for (const update of updates) {
+        const { error } = await supabase.from(table).update(update.values).eq("id", update.id);
+        if (error) throw error;
+      }
+    },
+    onMutate: async (updates) => {
+      await queryClient.cancelQueries({ queryKey: [key] });
+      const previous = queryClient.getQueryData<Array<Record<string, unknown>>>([key]);
+      if (previous) {
+        queryClient.setQueryData(
+          [key],
+          previous.map((row) => {
+            const update = updates.find((item) => item.id === row.id);
+            return update ? { ...row, ...update.values } : row;
+          }),
+        );
+      }
+      return { previous };
+    },
+    onError: (_error, _updates, context) => {
+      if (context?.previous) queryClient.setQueryData([key], context.previous);
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: [key] }),
+  });
+}
+
+export function useDeleteContentItem() {
+  const invalidate = useInvalidator();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("content_items").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("content-items"),
+  });
+}
