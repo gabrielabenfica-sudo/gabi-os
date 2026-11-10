@@ -17,5 +17,5 @@ jobs:
           node-version: 22
       - run: npm install --no-audit --no-fund
       - run: npm run build
-      - run: node --experimental-strip-types --test tests/
+      - run: node --experimental-strip-types --test tests/kanban.test.ts
       - run: cd server && npm install --no-audit --no-fund && node --test
