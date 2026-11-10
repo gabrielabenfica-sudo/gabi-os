@@ -7,12 +7,14 @@ import { assistant } from "./assistant.mjs";
 import { integrations } from "./integrations.mjs";
 import { integrationsCallback } from "./callback.mjs";
 import { seed } from "./seed.mjs";
+import { sheetSync } from "./sheets.mjs";
 
 const routes = {
   "/functions/v1/assistant": assistant,
   "/functions/v1/integrations": integrations,
   "/functions/v1/integrations-callback": integrationsCallback,
   "/functions/v1/seed-gabi-os": seed,
+  "/functions/v1/sheet-sync": sheetSync,
 };
 
 // Temporary: receives the export of the old app (Enter) so it can be moved into Neon.
