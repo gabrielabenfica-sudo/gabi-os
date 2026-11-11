@@ -1,23 +1,26 @@
 /**
- * Gabi OS — envia a aba "Tarefas" desta planilha para as Tarefas do Trabalho TURBO.
+ * Gabi OS — envia abas desta planilha para o Trabalho TURBO:
+ *   Tarefas → Tarefas · Stories e Reels → Conteúdo · Tendências → Referências (no Conteúdo).
  *
  * Como instalar (uma vez):
  *   1. Na planilha: Extensões > Apps Script.
  *   2. Apague o que estiver no editor, cole este código e salve.
  *   3. Escolha a função "instalarGabiOS" no topo e clique em Executar. Autorize o acesso.
  *
- * Depois disso, toda linha nova (ou alterada) na aba Tarefas vai para o Gabi OS sozinha:
+ * Depois disso, toda linha nova (ou alterada) nessas abas vai para o Gabi OS sozinha:
  *   - na hora em que a planilha é editada; e
  *   - de 15 em 15 minutos, como garantia.
  * Também aparece o menu "Gabi OS > Enviar tarefas agora".
  *
- * Só entram linhas com a coluna "Tarefa" preenchida e Proprietário = Gabriela (ou vazio).
+ * Tarefas: só linhas com "Tarefa" preenchida e Proprietário = Gabriela (ou vazio).
+ * Stories, Reels e Tendências: toda linha com a coluna "Conteúdo" preenchida.
  * A ligação entre cada linha e a tarefa fica guardada na própria linha (metadados invisíveis),
  * então ordenar, filtrar ou inserir linhas não cria tarefas repetidas.
  */
 const GABI_OS_URL = 'https://gabi-os-api.onrender.com/functions/v1/sheet-sync';
 const GABI_OS_TOKEN = 'COLE_AQUI_O_TOKEN';
-const GABI_OS_ABA = 'Tarefas';
+// Aba → coluna que precisa estar preenchida para a linha ir para o Gabi OS
+const GABI_OS_ABAS = { tarefas: 'Tarefa', stories: 'Conteúdo', reels: 'Conteúdo', tendencias: 'Conteúdo' };
 const GABI_OS_CHAVE = 'gabi_os_id';
 
 function onOpen() {
@@ -36,8 +39,12 @@ function instalarGabiOS() {
   Logger.log('Instalado. Primeiro envio: ' + JSON.stringify(r));
 }
 
+function gabiOsNorm_(s) {
+  return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+}
+
 function gabiOsAoEditar(e) {
-  if (e && e.range && e.range.getSheet().getName() !== GABI_OS_ABA) return;
+  if (e && e.range && !GABI_OS_ABAS[gabiOsNorm_(e.range.getSheet().getName())]) return;
   enviarTarefasGabiOS();
 }
 
@@ -47,53 +54,60 @@ function gabiOsPeriodico() {
 
 function enviarTarefasGabiOSMenu() {
   const r = enviarTarefasGabiOS();
-  SpreadsheetApp.getActive().toast(
-    'Novas: ' + r.created + ' · Atualizadas: ' + r.updated + ' · Sem mudança: ' + r.unchanged + ' · Fora (outra pessoa/sem título): ' + r.ignored,
-    'Gabi OS',
-    8
-  );
+  if (!r) return;
+  const partes = Object.keys(r).map((aba) => aba + ': ' + r[aba].created + ' novas, ' + r[aba].updated + ' atualizadas');
+  SpreadsheetApp.getActive().toast(partes.join(' · ') || 'Nada para enviar.', 'Gabi OS', 10);
 }
 
+/** Envia todas as abas ligadas ao Gabi OS. Devolve o resultado por aba. */
 function enviarTarefasGabiOS() {
   const lock = LockService.getDocumentLock();
   if (!lock.tryLock(30000)) return null;
   try {
     const ss = SpreadsheetApp.getActive();
-    const sh = ss.getSheetByName(GABI_OS_ABA);
-    if (!sh) throw new Error('Aba "' + GABI_OS_ABA + '" não encontrada.');
-    const ultima = sh.getLastRow();
-    const ncol = sh.getLastColumn();
-    if (ultima < 2 || ncol < 1) return enviar_(ss, []);
-    const cab = sh.getRange(1, 1, 1, ncol).getValues()[0].map((h) => String(h).trim());
-    const valores = sh.getRange(2, 1, ultima - 1, ncol).getValues();
-    const tz = ss.getSpreadsheetTimeZone();
-    const chaves = chavesDasLinhas_(sh);
-    const usadas = {};
-    const linhas = [];
-    valores.forEach((linha, i) => {
-      const r = i + 2;
-      const obj = {};
-      cab.forEach((h, c) => {
-        if (!h) return;
-        const v = linha[c];
-        obj[h] = v instanceof Date ? Utilities.formatDate(v, tz, 'yyyy-MM-dd') : String(v).trim();
-      });
-      if (!obj['Tarefa']) return;
-      const mds = chaves[r] || [];
-      let chave = mds.length ? mds[0].getValue() : null;
-      if (!chave || usadas[chave]) {
-        // Linha nova (ou copiada de outra): ganha uma identificação própria
-        mds.forEach((md) => md.remove());
-        chave = Utilities.getUuid();
-        sh.getRange(r + ':' + r).addDeveloperMetadata(GABI_OS_CHAVE, chave);
-      }
-      usadas[chave] = true;
-      linhas.push({ key: chave, values: obj });
+    const resultado = {};
+    ss.getSheets().forEach((sh) => {
+      const chaveObrigatoria = GABI_OS_ABAS[gabiOsNorm_(sh.getName())];
+      if (!chaveObrigatoria) return;
+      resultado[sh.getName()] = enviarAba_(ss, sh, chaveObrigatoria);
     });
-    return enviar_(ss, linhas);
+    return resultado;
   } finally {
     lock.releaseLock();
   }
+}
+
+function enviarAba_(ss, sh, colunaObrigatoria) {
+  const ultima = sh.getLastRow();
+  const ncol = sh.getLastColumn();
+  if (ultima < 2 || ncol < 1) return enviar_(ss, sh.getName(), []);
+  const cab = sh.getRange(1, 1, 1, ncol).getValues()[0].map((h) => String(h).trim());
+  const valores = sh.getRange(2, 1, ultima - 1, ncol).getValues();
+  const tz = ss.getSpreadsheetTimeZone();
+  const chaves = chavesDasLinhas_(sh);
+  const usadas = {};
+  const linhas = [];
+  valores.forEach((linha, i) => {
+    const r = i + 2;
+    const obj = {};
+    cab.forEach((h, c) => {
+      if (!h) return;
+      const v = linha[c];
+      obj[h] = v instanceof Date ? Utilities.formatDate(v, tz, 'yyyy-MM-dd') : String(v).trim();
+    });
+    if (!obj[colunaObrigatoria]) return;
+    const mds = chaves[r] || [];
+    let chave = mds.length ? mds[0].getValue() : null;
+    if (!chave || usadas[chave]) {
+      // Linha nova (ou copiada de outra): ganha uma identificação própria
+      mds.forEach((md) => md.remove());
+      chave = Utilities.getUuid();
+      sh.getRange(r + ':' + r).addDeveloperMetadata(GABI_OS_CHAVE, chave);
+    }
+    usadas[chave] = true;
+    linhas.push({ key: chave, values: obj });
+  });
+  return enviar_(ss, sh.getName(), linhas);
 }
 
 function chavesDasLinhas_(sh) {
@@ -109,12 +123,12 @@ function chavesDasLinhas_(sh) {
   return m;
 }
 
-function enviar_(ss, linhas) {
+function enviar_(ss, aba, linhas) {
   const opcoes = {
     method: 'post',
     contentType: 'application/json',
     headers: { 'x-sync-token': GABI_OS_TOKEN },
-    payload: JSON.stringify({ spreadsheetId: ss.getId(), rows: linhas }),
+    payload: JSON.stringify({ spreadsheetId: ss.getId(), sheet: aba, rows: linhas }),
     muteHttpExceptions: true,
   };
   let res = null;
@@ -130,7 +144,7 @@ function enviar_(ss, linhas) {
   }
   const code = res.getResponseCode();
   const body = res.getContentText();
-  Logger.log('Gabi OS respondeu ' + code + ': ' + body);
-  if (code !== 200) throw new Error('Gabi OS respondeu ' + code + ': ' + body);
+  Logger.log('Gabi OS (' + aba + ') respondeu ' + code + ': ' + body);
+  if (code !== 200) throw new Error('Gabi OS (' + aba + ') respondeu ' + code + ': ' + body);
   return JSON.parse(body);
 }

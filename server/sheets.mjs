@@ -1,8 +1,9 @@
-// Recebe as linhas da aba "Tarefas" da planilha (enviadas pelo Apps Script instalado nela)
-// e cria/atualiza as tarefas correspondentes no ambiente Trabalho TURBO da Gabriela.
+// Recebe as linhas das abas da planilha (enviadas pelo Apps Script instalado nela):
+// Tarefas → tarefas; Stories e Reels → conteúdo; Tendências → referências (ambiente Trabalho TURBO).
 import { timingSafeEqual } from "node:crypto";
 import { env, json, sql as defaultSql, OWNER_EMAIL } from "./lib.mjs";
-import { changedFields, isMine, taskFieldsFromRow } from "./sheet-map.mjs";
+import { changedFields, isMine, sheetKind, taskFieldsFromRow } from "./sheet-map.mjs";
+import { syncContent, syncReferences } from "./sheets-content.mjs";
 
 const MAX_ROWS = 2000;
 
@@ -31,6 +32,8 @@ export async function sheetSync(req) {
   const spreadsheetId = typeof body?.spreadsheetId === "string" ? body.spreadsheetId.trim() : "";
   const rows = Array.isArray(body?.rows) ? body.rows : null;
   if (!spreadsheetId || !rows) return json({ error: "Envie spreadsheetId e rows." }, 400);
+  const kind = sheetKind(typeof body?.sheet === "string" ? body.sheet : "Tarefas");
+  if (!kind) return json({ error: `Aba não suportada: ${body?.sheet}` }, 400);
   if (rows.length > MAX_ROWS) return json({ error: `No máximo ${MAX_ROWS} linhas por envio.` }, 400);
   for (const r of rows) {
     if (!r || typeof r.key !== "string" || !r.key || typeof r.values !== "object" || !r.values) {
@@ -38,7 +41,13 @@ export async function sheetSync(req) {
     }
   }
   try {
-    const result = await emFila(() => syncRows(spreadsheetId, rows));
+    const result = await emFila(() =>
+      kind === "tasks"
+        ? syncRows(spreadsheetId, rows)
+        : kind === "trends"
+          ? syncReferences(spreadsheetId, rows)
+          : syncContent(spreadsheetId, rows, kind),
+    );
     return json({ ok: true, ...result });
   } catch (error) {
     console.error("sheet-sync failed", error);

@@ -283,7 +283,7 @@ export default function Conteudo() {
                       {reference.format ?? "—"}
                     </Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground">@{reference.creator}</p>
+                  {reference.creator ? <p className="text-xs text-muted-foreground">{reference.creator.startsWith("http") || /\s/.test(reference.creator) ? reference.creator : `@${reference.creator}`}</p> : null}
                   {reference.notes ? (
                     <p className="text-sm text-muted-foreground">{reference.notes}</p>
                   ) : null}

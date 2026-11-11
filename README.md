@@ -32,9 +32,21 @@ A Data API do Neon guarda uma lista das tabelas. Depois de qualquer mudança no 
 atualize essa lista (Console do Neon > Data API > "Refresh schema cache", ou reaplicando a
 configuração da Data API). Sem isso, o app recebe erro 404 ao salvar na tabela nova.
 
-## Planilha “Resultados Marketing — Turbo” → Tarefas
+## Planilha “Resultados Marketing — Turbo” → Tarefas, Conteúdo e Referências
 
-A aba **Tarefas** da planilha alimenta o quadro de Tarefas do **Trabalho TURBO**.
+Abas da planilha que alimentam o **Trabalho TURBO**:
+
+| Aba | Vai para | Linha entra quando |
+|---|---|---|
+| Tarefas | Tarefas | “Tarefa” preenchida e Proprietário = Gabriela (ou vazio) |
+| Stories | Conteúdo (formato Stories) | “Conteúdo” preenchido |
+| Reels | Conteúdo (formato Reels) | “Conteúdo” preenchido |
+| Tendências | Conteúdo → Referências | “Conteúdo” preenchido |
+
+Stories: “Data da postagem” + hora no texto (ex.: “15h”) viram a data de publicação; Status vira a
+etapa pelo nome (Roteirizado → Roteirização; sem correspondência → Ideia); “TURBO…”/“SAMUEL…” no
+começo do texto escolhe o perfil. Tendências: Conteúdo → tema, Arquivo (link) → URL, Detalhes →
+observações, fonte entre parênteses → criador, Status → etiqueta.
 
 - O script `integracoes/planilha-tarefas.gs` fica dentro da planilha (Extensões > Apps Script).
   Ele envia as linhas para `POST /functions/v1/sheet-sync` quando a planilha é editada e a cada
